@@ -100,6 +100,11 @@ export class CameraPlayer {
 
   protected reconnect(event: Event): void {
     event.stopPropagation();
+    this.reload();
+  }
+
+  /** Close the current stream and open a fresh one. */
+  reload(): void {
     this.status.set('connecting');
     this.attempt.update((n) => n + 1);
   }

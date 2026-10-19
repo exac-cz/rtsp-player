@@ -1,6 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+  viewChildren,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import type { Camera } from '../../../electron/api-types';
+import type { Camera, StreamQuality } from '../../../electron/api-types';
 import { CameraStore } from '../core/camera-store';
 import { CameraPlayer } from '../player/camera-player';
 
@@ -23,6 +32,11 @@ const AUTO_MAX_TILES = 16;
         }
       </div>
 
+      <div class="segmented" role="group" aria-label="Stream quality">
+        <button type="button" [class.active]="quality() === 'lq'" (click)="quality.set('lq')" title="Low-quality sub-streams">LQ</button>
+        <button type="button" [class.active]="quality() === 'hq'" (click)="quality.set('hq')" title="High-quality main streams">HQ</button>
+      </div>
+
       @if (pageCount() > 1) {
         <div class="pager">
           <button type="button" class="btn icon" (click)="goToPage(currentPage() - 1)" [disabled]="currentPage() === 0" aria-label="Previous page">‹</button>
@@ -33,6 +47,7 @@ const AUTO_MAX_TILES = 16;
 
       <span class="spacer"></span>
       <span class="muted">Click a camera to open it</span>
+      <button type="button" class="btn" (click)="reloadAll()" [disabled]="!cameras().length" title="Reconnect all visible streams">⟳ Reload</button>
       <button type="button" class="btn" (click)="fullscreen()" [disabled]="!cameras().length">⛶ Fullscreen</button>
     </div>
 
@@ -53,7 +68,7 @@ const AUTO_MAX_TILES = 16;
           <app-camera-player
             class="tile"
             [camera]="camera"
-            quality="lq"
+            [quality]="quality()"
             [maxWidth]="streamWidth()"
             [fps]="12"
             (click)="open(camera)"
@@ -78,7 +93,10 @@ export class GridView {
   ];
 
   protected readonly layout = signal<Layout>('auto');
+  /** Grid starts on the light sub-streams; HQ is opt-in because it costs much more CPU. */
+  protected readonly quality = signal<StreamQuality>('lq');
   private readonly page = signal(0);
+  private readonly players = viewChildren(CameraPlayer);
 
   protected readonly cameras = this.store.cameras;
 
@@ -108,13 +126,11 @@ export class GridView {
     return Math.max(1, Math.ceil(this.visibleCameras().length / this.columns()));
   });
 
-  /** Smaller tiles get smaller streams to save CPU. */
+  /** Smaller tiles get smaller streams to save CPU; HQ keeps twice the detail (e.g. for HiDPI screens). */
   protected readonly streamWidth = computed(() => {
     const cols = this.columns();
-    if (cols <= 1) return 1920;
-    if (cols === 2) return 960;
-    if (cols === 3) return 640;
-    return 480;
+    const width = cols <= 1 ? 1920 : cols === 2 ? 960 : cols === 3 ? 640 : 480;
+    return this.quality() === 'hq' ? Math.min(1920, width * 2) : width;
   });
 
   constructor() {
@@ -131,6 +147,10 @@ export class GridView {
 
   protected goToPage(page: number): void {
     this.page.set(Math.max(0, Math.min(page, this.pageCount() - 1)));
+  }
+
+  protected reloadAll(): void {
+    for (const player of this.players()) player.reload();
   }
 
   protected open(camera: Camera): void {
