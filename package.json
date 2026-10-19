@@ -1,0 +1,64 @@
+{
+  "name": "rtsp-player",
+  "version": "1.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "concurrently -k -n ng,electron -c blue,magenta \"ng serve --port 4200\" \"wait-on tcp:127.0.0.1:4200 && npm run electron:dev\"",
+    "electron:dev": "tsc -p electron && cross-env ELECTRON_START_URL=http://localhost:4200 electron .",
+    "build": "ng build && tsc -p electron",
+    "electron": "npm run build && electron .",
+    "dist": "npm run build && electron-builder",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test"
+  },
+  "private": true,
+  "packageManager": "npm@11.12.1",
+  "dependencies": {
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/platform-browser": "^21.2.0",
+    "@angular/router": "^21.2.0",
+    "ffmpeg-static": "^5.3.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.2.27",
+    "@angular/cli": "^21.2.27",
+    "@angular/compiler-cli": "^21.2.0",
+    "@types/node": "^26.6.5",
+    "concurrently": "^10.0.6",
+    "cross-env": "^10.1.0",
+    "electron": "^44.9.0",
+    "electron-builder": "^26.15.3",
+    "prettier": "^3.8.1",
+    "typescript": "~5.9.2",
+    "wait-on": "^9.5.1"
+  },
+  "description": "Watch RTSP CCTV cameras in single or grid view",
+  "main": "dist-electron/main.js",
+  "build": {
+    "appId": "info.exac.rtsp-player",
+    "productName": "RTSP Player",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/rtsp-player/browser/**",
+      "dist-electron/**",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
