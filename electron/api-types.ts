@@ -37,6 +37,24 @@ export type StreamStatus = 'connecting' | 'playing' | 'error' | 'ended';
 
 export type TestResult = { ok: true; snapshot: string } | { ok: false; error: string };
 
+/** merge: add cameras that are not in the list yet; replace: swap the whole list for the file's. */
+export type ImportMode = 'merge' | 'replace';
+
+export interface ImportPreview {
+  fileName: string;
+  total: number;
+  /** Cameras in the file whose stream URLs already exist in the list (skipped when merging). */
+  duplicates: number;
+  hasCustomGrid: boolean;
+}
+
+export interface ImportResult {
+  added: number;
+  skipped: number;
+}
+
+export type ExportResult = { saved: false } | { saved: true; path: string; count: number };
+
 export type FrameListener = (frame: Uint8Array<ArrayBuffer>) => void;
 export type StatusListener = (status: StreamStatus, message?: string) => void;
 
@@ -51,6 +69,12 @@ export interface RtspApi {
   deleteCamera(id: number): Promise<void>;
   reorderCameras(ids: number[]): Promise<Camera[]>;
   testStream(url: string, transport: Transport): Promise<TestResult>;
+  /** Ask for a file name and write all cameras (and the Custom grid) to it. */
+  exportCameras(): Promise<ExportResult>;
+  /** Ask for a file and check it; null if the user cancelled. Throws if the file is invalid. */
+  pickImportFile(): Promise<ImportPreview | null>;
+  /** Apply the file picked by the last pickImportFile(). */
+  applyImport(mode: ImportMode): Promise<ImportResult>;
   getSetting(key: string): Promise<string | null>;
   setSetting(key: string, value: string): Promise<void>;
   openStream(

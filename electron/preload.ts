@@ -21,6 +21,9 @@ const api: RtspApi = {
   deleteCamera: (id) => ipcRenderer.invoke('cameras:delete', id),
   reorderCameras: (ids) => ipcRenderer.invoke('cameras:reorder', ids),
   testStream: (url, transport) => ipcRenderer.invoke('cameras:test', url, transport),
+  exportCameras: () => ipcRenderer.invoke('cameras:export'),
+  pickImportFile: () => ipcRenderer.invoke('cameras:import-pick'),
+  applyImport: (mode) => ipcRenderer.invoke('cameras:import-apply', mode),
   getSetting: (key) => ipcRenderer.invoke('settings:get', key),
   setSetting: (key, value) => ipcRenderer.invoke('settings:set', key, value),
 

@@ -10,13 +10,13 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import type { Camera, StreamQuality } from '../../../electron/api-types';
+import { CUSTOM_GRID_SETTING } from '../../../electron/settings-keys';
 import { CameraStore } from '../core/camera-store';
 import { CameraPlayer } from '../player/camera-player';
 import { CustomGridEditor } from './custom-grid-editor';
 
 type Layout = 'custom' | 'auto' | '1' | '2' | '3' | '4';
 
-const CUSTOM_GRID_SETTING = 'grid.custom';
 const AUTO_MAX_TILES = 16;
 
 @Component({

@@ -106,6 +106,34 @@ export class CameraRepository {
     this.db.prepare('DELETE FROM cameras WHERE id = ?').run(id);
   }
 
+  /**
+   * Insert cameras in one transaction, after the existing ones (or instead of them when
+   * `replace` is set). Returns the new ids in input order.
+   */
+  importCameras(inputs: CameraInput[], replace: boolean): number[] {
+    this.db.exec('BEGIN');
+    try {
+      if (replace) this.db.exec('DELETE FROM cameras');
+      const { next } = this.db.prepare('SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM cameras').get() as {
+        next: number;
+      };
+      const insert = this.db.prepare(
+        'INSERT INTO cameras (name, hq_url, lq_url, transport, sort_order) VALUES (?, ?, ?, ?, ?)',
+      );
+      const ids = inputs.map((input, i) =>
+        Number(
+          insert.run(input.name, encryptUrl(input.hqUrl), encryptUrl(input.lqUrl), input.transport, next + i)
+            .lastInsertRowid,
+        ),
+      );
+      this.db.exec('COMMIT');
+      return ids;
+    } catch (err) {
+      this.db.exec('ROLLBACK');
+      throw err;
+    }
+  }
+
   reorder(ids: number[]): Camera[] {
     const stmt = this.db.prepare('UPDATE cameras SET sort_order = ? WHERE id = ?');
     this.db.exec('BEGIN');
@@ -128,6 +156,10 @@ export class CameraRepository {
     this.db
       .prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
       .run(key, value);
+  }
+
+  deleteSetting(key: string): void {
+    this.db.prepare('DELETE FROM settings WHERE key = ?').run(key);
   }
 
   close(): void {

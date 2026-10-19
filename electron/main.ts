@@ -1,38 +1,89 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, type WebContents } from 'electron';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { Camera, CameraInput, StreamOptions, TestResult, Transport } from './api-types';
+import type { Camera, ExportResult, ImportPreview, ImportResult, StreamOptions, TestResult } from './api-types';
 import { CameraRepository } from './db';
+import { CUSTOM_GRID_SETTING } from './settings-keys';
 import { captureSnapshot, StreamManager } from './streams';
+import { parseImport, sameStreams, serializeExport, type ParsedImport } from './transfer';
+import { toCameraInput, toId, toTransport, toUrl } from './validation';
 
 const devServerUrl = process.env['ELECTRON_START_URL'];
 const streams = new StreamManager();
 let repo: CameraRepository;
 let mainWindow: BrowserWindow | null = null;
+/** File picked by `cameras:import-pick`, waiting for the user to choose how to apply it. */
+const pendingImports = new Map<number, ParsedImport>();
+const JSON_FILTERS = [{ name: 'Camera export (JSON)', extensions: ['json'] }];
 
-function toId(value: unknown): number {
-  const id = Number(value);
-  if (!Number.isSafeInteger(id) || id <= 0) throw new Error(`Invalid id: ${String(value)}`);
-  return id;
+function savedCustomGrid(): number[] | null {
+  try {
+    const ids = JSON.parse(repo.getSetting(CUSTOM_GRID_SETTING) ?? 'null') as unknown;
+    return Array.isArray(ids) ? ids.filter((id): id is number => Number.isInteger(id)) : null;
+  } catch {
+    return null;
+  }
 }
 
-function toUrl(value: unknown, label: string): string {
-  const url = typeof value === 'string' ? value.trim() : '';
-  if (url && !/^rtsps?:\/\/\S+$/i.test(url)) throw new Error(`${label} must start with rtsp:// or rtsps://`);
-  return url;
+async function exportCameras(sender: WebContents): Promise<ExportResult> {
+  const cameras = repo.list();
+  if (!cameras.length) throw new Error('There are no cameras to export');
+  const win = BrowserWindow.fromWebContents(sender);
+  const options = {
+    title: 'Export cameras',
+    defaultPath: path.join(app.getPath('documents'), 'rtsp-cameras.json'),
+    filters: JSON_FILTERS,
+  };
+  const { canceled, filePath } = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options);
+  if (canceled || !filePath) return { saved: false };
+  await writeFile(filePath, serializeExport(cameras, savedCustomGrid()), 'utf8');
+  return { saved: true, path: filePath, count: cameras.length };
 }
 
-function toTransport(value: unknown): Transport {
-  return value === 'udp' ? 'udp' : 'tcp';
+async function pickImportFile(sender: WebContents): Promise<ImportPreview | null> {
+  const win = BrowserWindow.fromWebContents(sender);
+  const options = {
+    title: 'Import cameras',
+    defaultPath: app.getPath('documents'),
+    filters: JSON_FILTERS,
+    properties: ['openFile' as const],
+  };
+  const { canceled, filePaths } = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
+  if (canceled || !filePaths[0]) return null;
+
+  const parsed = parseImport(await readFile(filePaths[0], 'utf8'));
+  pendingImports.set(sender.id, parsed);
+  const existing = repo.list();
+  return {
+    fileName: path.basename(filePaths[0]),
+    total: parsed.cameras.length,
+    duplicates: parsed.cameras.filter((c) => existing.some((e) => sameStreams(c, e))).length,
+    hasCustomGrid: parsed.customGrid !== null,
+  };
 }
 
-function toCameraInput(value: unknown): CameraInput {
-  const input = (value ?? {}) as Partial<Record<keyof CameraInput, unknown>>;
-  const name = typeof input.name === 'string' ? input.name.trim() : '';
-  if (!name) throw new Error('Camera name is required');
-  const hqUrl = toUrl(input.hqUrl, 'HQ URL');
-  const lqUrl = toUrl(input.lqUrl, 'LQ URL');
-  if (!hqUrl && !lqUrl) throw new Error('Enter at least one stream URL');
-  return { name, hqUrl, lqUrl, transport: toTransport(input.transport) };
+function applyImport(sender: WebContents, mode: unknown): ImportResult {
+  const parsed = pendingImports.get(sender.id);
+  if (!parsed) throw new Error('Pick a file to import first');
+  pendingImports.delete(sender.id);
+
+  if (mode === 'replace') {
+    const ids = repo.importCameras(parsed.cameras, true);
+    // Restore the Custom grid from the file; without one, Custom shows every camera.
+    if (parsed.customGrid) repo.setSetting(CUSTOM_GRID_SETTING, JSON.stringify(parsed.customGrid.map((i) => ids[i])));
+    else repo.deleteSetting(CUSTOM_GRID_SETTING);
+    return { added: ids.length, skipped: 0 };
+  }
+
+  // Merge: skip cameras already in the list (or repeated within the file).
+  const known: { hqUrl: string; lqUrl: string }[] = repo.list();
+  const fresh = parsed.cameras.filter((c) => {
+    if (known.some((k) => sameStreams(c, k))) return false;
+    known.push(c);
+    return true;
+  });
+  repo.importCameras(fresh, false);
+  return { added: fresh.length, skipped: parsed.cameras.length - fresh.length };
 }
 
 /** Pick the requested stream, falling back to the other one when only one URL is set. */
@@ -66,6 +117,10 @@ function registerIpc(): void {
       return { ok: false, error: (err as Error).message };
     }
   });
+
+  ipcMain.handle('cameras:export', (e) => exportCameras(e.sender));
+  ipcMain.handle('cameras:import-pick', (e) => pickImportFile(e.sender));
+  ipcMain.handle('cameras:import-apply', (e, mode) => applyImport(e.sender, mode));
 
   ipcMain.handle('settings:get', (_e, key) => repo.getSetting(String(key)));
   ipcMain.handle('settings:set', (_e, key, value) => repo.setSetting(String(key), String(value)));

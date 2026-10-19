@@ -8,7 +8,14 @@ import {
   Validators,
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import type { Camera, CameraInput, TestResult, Transport } from '../../../electron/api-types';
+import type {
+  Camera,
+  CameraInput,
+  ImportMode,
+  ImportPreview,
+  TestResult,
+  Transport,
+} from '../../../electron/api-types';
 import { CameraStore, errorMessage, maskUrl } from '../core/camera-store';
 
 /** Empty, or an rtsp:// / rtsps:// URL. */
@@ -32,12 +39,51 @@ interface StreamTest {
     <div class="toolbar">
       <h2 class="toolbar-title">Cameras</h2>
       <span class="spacer"></span>
+      <button type="button" class="btn" (click)="pickImport()" [disabled]="!store.api || transferBusy()" title="Add cameras from a JSON file">
+        ⇩ Import
+      </button>
+      <button type="button" class="btn" (click)="exportCameras()" [disabled]="!store.cameras().length || transferBusy()" title="Save all cameras to a JSON file">
+        ⇧ Export
+      </button>
       @if (!formOpen()) {
         <button type="button" class="btn primary" (click)="startAdd()" [disabled]="!store.api">+ Add camera</button>
       }
     </div>
 
     <div class="page">
+      @if (importPreview(); as preview) {
+        <div class="card import-card">
+          <h3>Import “{{ preview.fileName }}”</h3>
+          <p>
+            {{ preview.total }} {{ preview.total === 1 ? 'camera' : 'cameras' }} in the file
+            @if (preview.duplicates) {
+              — {{ preview.duplicates }} already in your list (same stream URLs)
+            }
+          </p>
+          <div class="form-actions">
+            <button type="button" class="btn primary" (click)="applyImport('merge')" [disabled]="transferBusy() || preview.duplicates >= preview.total">
+              Add {{ preview.total - preview.duplicates }} new
+            </button>
+            <button type="button" class="btn danger" (click)="applyImport('replace')" [disabled]="transferBusy()">
+              Replace all cameras
+            </button>
+            <span class="spacer"></span>
+            <button type="button" class="btn" (click)="importPreview.set(null)">Cancel</button>
+          </div>
+          <small class="muted">
+            “Replace all” deletes your current {{ store.cameras().length }} cameras
+            {{ preview.hasCustomGrid ? 'and restores the Custom grid from the file.' : 'and resets the Custom grid to show all cameras.' }}
+          </small>
+        </div>
+      }
+
+      @if (notice(); as n) {
+        <div class="card test-result notice" [class.ok]="n.ok" [class.error]="!n.ok">
+          <span>{{ n.text }}</span>
+          <button type="button" class="btn small" (click)="notice.set(null)">Dismiss</button>
+        </div>
+      }
+
       @if (formOpen()) {
         <form class="card camera-form" [formGroup]="form" (ngSubmit)="save()">
           <h3>{{ editingId() ? 'Edit camera' : 'New camera' }}</h3>
@@ -166,6 +212,10 @@ export class CameraManager {
   protected readonly testResults = signal<StreamTest[]>([]);
   protected readonly formError = signal<string | null>(null);
 
+  protected readonly importPreview = signal<ImportPreview | null>(null);
+  protected readonly transferBusy = signal(false);
+  protected readonly notice = signal<{ ok: boolean; text: string } | null>(null);
+
   protected readonly mask = maskUrl;
 
   constructor() {
@@ -240,6 +290,55 @@ export class CameraManager {
       if (this.editingId() === camera.id) this.closeForm();
     } catch (err) {
       alert(errorMessage(err));
+    }
+  }
+
+  protected async exportCameras(): Promise<void> {
+    const api = this.store.api;
+    if (!api) return;
+    await this.runTransfer(async () => {
+      const result = await api.exportCameras();
+      if (result.saved) {
+        this.notice.set({
+          ok: true,
+          text: `Exported ${result.count} cameras to ${result.path}. The file contains camera passwords in plain text, so keep it safe.`,
+        });
+      }
+    });
+  }
+
+  protected async pickImport(): Promise<void> {
+    const api = this.store.api;
+    if (!api) return;
+    this.importPreview.set(null);
+    await this.runTransfer(async () => this.importPreview.set(await api.pickImportFile()));
+  }
+
+  protected async applyImport(mode: ImportMode): Promise<void> {
+    const api = this.store.api;
+    if (!api) return;
+    if (mode === 'replace' && !confirm(`Delete your ${this.store.cameras().length} cameras and replace them with the imported ones?`)) {
+      return;
+    }
+    await this.runTransfer(async () => {
+      const { added, skipped } = await api.applyImport(mode);
+      this.importPreview.set(null);
+      await this.store.load();
+      const skippedText = skipped ? `, skipped ${skipped} already in the list` : '';
+      this.notice.set({ ok: true, text: `Imported ${added} ${added === 1 ? 'camera' : 'cameras'}${skippedText}.` });
+    });
+  }
+
+  /** Run an export/import step, turning failures into an error notice. */
+  private async runTransfer(step: () => Promise<void>): Promise<void> {
+    this.transferBusy.set(true);
+    this.notice.set(null);
+    try {
+      await step();
+    } catch (err) {
+      this.notice.set({ ok: false, text: errorMessage(err) });
+    } finally {
+      this.transferBusy.set(false);
     }
   }
 
