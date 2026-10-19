@@ -57,8 +57,18 @@
       background: #c42b1c;
     }
 
-    &.close svg {
+    &.close svg,
+    &.pin svg {
       shape-rendering: geometricPrecision;
+    }
+
+    // Always-on-top pin: filled and accent-coloured while active.
+    &.pin.active {
+      color: var(--accent);
+
+      svg {
+        fill: currentColor;
+      }
     }
   }
 

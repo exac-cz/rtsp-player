@@ -99,4 +99,12 @@ export interface RtspApi {
   isWindowMaximized(): Promise<boolean>;
   /** Returns a function that removes the listener. */
   onWindowMaximizedChange(listener: (maximized: boolean) => void): () => void;
+  /**
+   * Keep the window above other windows, or stop doing so. Resolves to the window's actual
+   * state afterwards; remembered across restarts.
+   */
+  toggleAlwaysOnTop(): Promise<boolean>;
+  isAlwaysOnTop(): Promise<boolean>;
+  /** Returns a function that removes the listener. */
+  onAlwaysOnTopChange(listener: (alwaysOnTop: boolean) => void): () => void;
 }

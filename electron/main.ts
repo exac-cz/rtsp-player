@@ -11,7 +11,7 @@ import type {
   TestResult,
 } from './api-types';
 import { CameraRepository } from './db';
-import { CUSTOM_GRID_SETTING } from './settings-keys';
+import { ALWAYS_ON_TOP_SETTING, CUSTOM_GRID_SETTING } from './settings-keys';
 import { captureSnapshot, StreamManager } from './streams';
 import { parseImport, sameStreams, serializeExport, type ParsedImport } from './transfer';
 import { toCameraInput, toId, toTransport, toUrl } from './validation';
@@ -182,6 +182,19 @@ function registerIpc(): void {
     'window:is-maximized',
     (e) => BrowserWindow.fromWebContents(e.sender)?.isMaximized() ?? false,
   );
+  ipcMain.handle('window:toggle-always-on-top', (e): boolean => {
+    const win = BrowserWindow.fromWebContents(e.sender);
+    if (!win) return false;
+    win.setAlwaysOnTop(!win.isAlwaysOnTop());
+    // Report and remember what the window actually did, not what was requested.
+    const alwaysOnTop = win.isAlwaysOnTop();
+    repo.setSetting(ALWAYS_ON_TOP_SETTING, String(alwaysOnTop));
+    return alwaysOnTop;
+  });
+  ipcMain.handle(
+    'window:is-always-on-top',
+    (e) => BrowserWindow.fromWebContents(e.sender)?.isAlwaysOnTop() ?? false,
+  );
 }
 
 function createWindow(): void {
@@ -194,6 +207,7 @@ function createWindow(): void {
     backgroundColor: '#0e1014',
     // The app header acts as the title bar, with its own window buttons.
     frame: false,
+    alwaysOnTop: repo.getSetting(ALWAYS_ON_TOP_SETTING) === 'true',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -207,6 +221,9 @@ function createWindow(): void {
   // Keep the maximize/restore icon in the custom title bar in sync (also covers double-click and Win+Up).
   mainWindow.on('maximize', () => mainWindow?.webContents.send('window:maximized', true));
   mainWindow.on('unmaximize', () => mainWindow?.webContents.send('window:maximized', false));
+  mainWindow.on('always-on-top-changed', (_e, alwaysOnTop) =>
+    mainWindow?.webContents.send('window:always-on-top', alwaysOnTop),
+  );
 
   if (devServerUrl) {
     void mainWindow.loadURL(devServerUrl);

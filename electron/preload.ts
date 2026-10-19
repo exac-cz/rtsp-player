@@ -51,6 +51,13 @@ const api: RtspApi = {
     ipcRenderer.on('window:maximized', handler);
     return () => ipcRenderer.removeListener('window:maximized', handler);
   },
+  toggleAlwaysOnTop: () => ipcRenderer.invoke('window:toggle-always-on-top'),
+  isAlwaysOnTop: () => ipcRenderer.invoke('window:is-always-on-top'),
+  onAlwaysOnTopChange(listener) {
+    const handler = (_e: Electron.IpcRendererEvent, alwaysOnTop: boolean) => listener(alwaysOnTop);
+    ipcRenderer.on('window:always-on-top', handler);
+    return () => ipcRenderer.removeListener('window:always-on-top', handler);
+  },
 };
 
 contextBridge.exposeInMainWorld('rtspApi', api);

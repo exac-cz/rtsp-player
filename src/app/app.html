@@ -16,6 +16,19 @@
 
   @if (api) {
     <div class="window-controls">
+      <button
+        type="button"
+        class="pin"
+        [class.active]="alwaysOnTop()"
+        (click)="toggleAlwaysOnTop()"
+        [title]="alwaysOnTop() ? 'Always on top: on (click to turn off)' : 'Always on top'"
+        aria-label="Always on top"
+        [attr.aria-pressed]="alwaysOnTop()"
+      >
+        <svg viewBox="0 0 10 10" aria-hidden="true">
+          <path d="M3 .5h4M3.5.5V4L2 5.5h6L6.5 4V.5M5 5.5v4" />
+        </svg>
+      </button>
       <button type="button" (click)="api.minimizeWindow()" title="Minimize" aria-label="Minimize">
         <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M0 5.5h10" /></svg>
       </button>
