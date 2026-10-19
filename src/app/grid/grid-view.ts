@@ -24,38 +24,40 @@ const AUTO_MAX_TILES = 16;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CameraPlayer, CustomGridEditor, RouterLink],
   template: `
-    <div class="toolbar">
-      <div class="segmented" role="group" aria-label="Grid layout">
-        @for (option of layouts; track option.value) {
-          <button type="button" [class.active]="layout() === option.value" (click)="setLayout(option.value)">
-            {{ option.label }}
-          </button>
+    <div class="toolbar grid-toolbar">
+      <div class="toolbar-group">
+        <div class="segmented" role="group" aria-label="Grid layout">
+          @for (option of layouts; track option.value) {
+            <button type="button" [class.active]="layout() === option.value" (click)="setLayout(option.value)">
+              {{ option.label }}
+            </button>
+          }
+        </div>
+
+        @if (pageCount() > 1) {
+          <div class="pager">
+            <button type="button" class="btn icon" (click)="goToPage(currentPage() - 1)" [disabled]="currentPage() === 0" aria-label="Previous page">‹</button>
+            <span>Page {{ currentPage() + 1 }} / {{ pageCount() }}</span>
+            <button type="button" class="btn icon" (click)="goToPage(currentPage() + 1)" [disabled]="currentPage() >= pageCount() - 1" aria-label="Next page">›</button>
+          </div>
         }
       </div>
-
-      @if (layout() === 'custom') {
-        <button type="button" class="btn" [class.active]="editing()" (click)="editing.set(!editing())" [disabled]="!cameras().length">
-          ✎ Edit
-        </button>
-      }
 
       <div class="segmented" role="group" aria-label="Stream quality">
         <button type="button" [class.active]="quality() === 'lq'" (click)="quality.set('lq')" title="Low-quality sub-streams">LQ</button>
         <button type="button" [class.active]="quality() === 'hq'" (click)="quality.set('hq')" title="High-quality main streams">HQ</button>
       </div>
 
-      @if (pageCount() > 1) {
-        <div class="pager">
-          <button type="button" class="btn icon" (click)="goToPage(currentPage() - 1)" [disabled]="currentPage() === 0" aria-label="Previous page">‹</button>
-          <span>Page {{ currentPage() + 1 }} / {{ pageCount() }}</span>
-          <button type="button" class="btn icon" (click)="goToPage(currentPage() + 1)" [disabled]="currentPage() >= pageCount() - 1" aria-label="Next page">›</button>
-        </div>
-      }
-
-      <span class="spacer"></span>
-      <span class="muted">Click a camera to open it</span>
-      <button type="button" class="btn" (click)="reloadAll()" [disabled]="!visibleCameras().length" title="Reconnect all visible streams">⟳ Reload</button>
-      <button type="button" class="btn" (click)="fullscreen()" [disabled]="!visibleCameras().length">⛶ Fullscreen</button>
+      <div class="toolbar-group end">
+        <span class="muted">Click a camera to open it</span>
+        @if (layout() === 'custom') {
+          <button type="button" class="btn" [class.active]="editing()" (click)="editing.set(!editing())" [disabled]="!cameras().length">
+            ✎ Edit
+          </button>
+        }
+        <button type="button" class="btn" (click)="reloadAll()" [disabled]="!visibleCameras().length" title="Reconnect all visible streams">⟳ Reload</button>
+        <button type="button" class="btn" (click)="fullscreen()" [disabled]="!visibleCameras().length">⛶ Fullscreen</button>
+      </div>
     </div>
 
     <div class="grid-body">

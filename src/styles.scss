@@ -377,6 +377,23 @@ app-root {
 
 /* ---------- Grid view ---------- */
 
+// Three columns so the middle group (LQ/HQ) stays centred whatever the side groups contain.
+.grid-toolbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+
+  &.end {
+    justify-content: flex-end;
+  }
+}
+
 .toolbar .btn.active {
   border-color: var(--accent);
   color: #fff;
