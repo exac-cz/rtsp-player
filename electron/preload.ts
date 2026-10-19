@@ -37,6 +37,16 @@ const api: RtspApi = {
       },
     };
   },
+
+  minimizeWindow: () => ipcRenderer.send('window:minimize'),
+  toggleMaximizeWindow: () => ipcRenderer.send('window:toggle-maximize'),
+  closeWindow: () => ipcRenderer.send('window:close'),
+  isWindowMaximized: () => ipcRenderer.invoke('window:is-maximized'),
+  onWindowMaximizedChange(listener) {
+    const handler = (_e: Electron.IpcRendererEvent, maximized: boolean) => listener(maximized);
+    ipcRenderer.on('window:maximized', handler);
+    return () => ipcRenderer.removeListener('window:maximized', handler);
+  },
 };
 
 contextBridge.exposeInMainWorld('rtspApi', api);

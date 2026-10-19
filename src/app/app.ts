@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { CameraStore } from './core/camera-store';
 
@@ -7,12 +7,37 @@ import { CameraStore } from './core/camera-store';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   template: `
+    <!-- The header doubles as the window title bar: drag it to move, double-click to maximize. -->
     <header class="app-header">
       <span class="brand"><span class="brand-dot"></span> RTSP Player</span>
       <nav>
         <a routerLink="/grid" routerLinkActive="active">Grid view</a>
         <a routerLink="/cameras" routerLinkActive="active">Cameras ({{ store.cameras().length }})</a>
       </nav>
+      <span class="spacer"></span>
+
+      @if (api) {
+        <div class="window-controls">
+          <button type="button" (click)="api.minimizeWindow()" title="Minimize" aria-label="Minimize">
+            <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M0 5.5h10" /></svg>
+          </button>
+          <button
+            type="button"
+            (click)="api.toggleMaximizeWindow()"
+            [title]="maximized() ? 'Restore' : 'Maximize'"
+            [attr.aria-label]="maximized() ? 'Restore' : 'Maximize'"
+          >
+            @if (maximized()) {
+              <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2.5 2.5V.5h7v7h-2M.5 2.5h7v7h-7z" /></svg>
+            } @else {
+              <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M.5.5h9v9h-9z" /></svg>
+            }
+          </button>
+          <button type="button" class="close" (click)="api.closeWindow()" title="Close" aria-label="Close">
+            <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M0 0l10 10M10 0L0 10" /></svg>
+          </button>
+        </div>
+      }
     </header>
     <main class="app-main">
       <router-outlet />
@@ -21,8 +46,16 @@ import { CameraStore } from './core/camera-store';
 })
 export class App {
   protected readonly store = inject(CameraStore);
+  protected readonly api = this.store.api;
+  protected readonly maximized = signal(false);
 
   constructor() {
     void this.store.load();
+
+    if (this.api) {
+      void this.api.isWindowMaximized().then((m) => this.maximized.set(m));
+      const unsubscribe = this.api.onWindowMaximizedChange((m) => this.maximized.set(m));
+      inject(DestroyRef).onDestroy(unsubscribe);
+    }
   }
 }

@@ -80,6 +80,17 @@ function registerIpc(): void {
     streams.start(e.sender, toId(streamId), { url: streamUrl(camera, opts.quality), transport: camera.transport }, opts);
   });
   ipcMain.on('stream:stop', (e, streamId) => streams.stop(e.sender, toId(streamId)));
+
+  // Custom title bar buttons (the window is frameless).
+  ipcMain.on('window:minimize', (e) => BrowserWindow.fromWebContents(e.sender)?.minimize());
+  ipcMain.on('window:toggle-maximize', (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender);
+    if (!win) return;
+    if (win.isMaximized()) win.unmaximize();
+    else win.maximize();
+  });
+  ipcMain.on('window:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close());
+  ipcMain.handle('window:is-maximized', (e) => BrowserWindow.fromWebContents(e.sender)?.isMaximized() ?? false);
 }
 
 function createWindow(): void {
@@ -90,7 +101,8 @@ function createWindow(): void {
     minHeight: 500,
     title: 'RTSP Player',
     backgroundColor: '#0e1014',
-    autoHideMenuBar: true,
+    // The app header acts as the title bar, with its own window buttons.
+    frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -101,6 +113,9 @@ function createWindow(): void {
 
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   mainWindow.on('closed', () => (mainWindow = null));
+  // Keep the maximize/restore icon in the custom title bar in sync (also covers double-click and Win+Up).
+  mainWindow.on('maximize', () => mainWindow?.webContents.send('window:maximized', true));
+  mainWindow.on('unmaximize', () => mainWindow?.webContents.send('window:maximized', false));
 
   if (devServerUrl) {
     void mainWindow.loadURL(devServerUrl);

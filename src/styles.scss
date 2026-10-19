@@ -47,14 +47,18 @@ app-root {
   align-items: center;
   gap: 24px;
   height: var(--header-h);
-  padding: 0 16px;
+  padding: 0 0 0 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  // Acts as the window title bar: the empty area drags the window, interactive parts opt out.
+  -webkit-app-region: drag;
+  user-select: none;
 
   nav {
     display: flex;
     gap: 4px;
+    -webkit-app-region: no-drag;
   }
 
   nav a {
@@ -72,6 +76,44 @@ app-root {
       color: var(--text);
       background: var(--surface-2);
     }
+  }
+}
+
+.window-controls {
+  display: flex;
+  align-self: stretch;
+  -webkit-app-region: no-drag;
+
+  button {
+    width: 46px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: default;
+
+    &:hover {
+      color: var(--text);
+      background: var(--surface-2);
+    }
+
+    &.close:hover {
+      color: #fff;
+      background: #c42b1c;
+    }
+
+    &.close svg {
+      shape-rendering: geometricPrecision;
+    }
+  }
+
+  svg {
+    width: 10px;
+    height: 10px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+    vertical-align: middle;
   }
 }
 

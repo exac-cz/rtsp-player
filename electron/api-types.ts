@@ -59,4 +59,12 @@ export interface RtspApi {
     onFrame: FrameListener,
     onStatus: StatusListener,
   ): StreamHandle;
+
+  // Window controls for the custom (frameless) title bar.
+  minimizeWindow(): void;
+  toggleMaximizeWindow(): void;
+  closeWindow(): void;
+  isWindowMaximized(): Promise<boolean>;
+  /** Returns a function that removes the listener. */
+  onWindowMaximizedChange(listener: (maximized: boolean) => void): () => void;
 }
