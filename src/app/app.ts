@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import type { AppInfo } from '../../electron/api-types';
 import { CameraStore } from './core/camera-store';
 
 @Component({
@@ -9,7 +10,12 @@ import { CameraStore } from './core/camera-store';
   template: `
     <!-- The header doubles as the window title bar: drag it to move, double-click to maximize. -->
     <header class="app-header">
-      <span class="brand"><span class="brand-dot"></span> RTSP Player</span>
+      <span class="brand">
+        <span class="brand-dot"></span> RTSP Player
+        @if (appInfo()?.isDev) {
+          <span class="dev-badge" [title]="'Development version — data in ' + appInfo()?.dataPath">DEV</span>
+        }
+      </span>
       <nav>
         <a routerLink="/grid" routerLinkActive="active">Grid view</a>
         <a routerLink="/cameras" routerLinkActive="active">Cameras ({{ store.cameras().length }})</a>
@@ -48,11 +54,13 @@ export class App {
   protected readonly store = inject(CameraStore);
   protected readonly api = this.store.api;
   protected readonly maximized = signal(false);
+  protected readonly appInfo = signal<AppInfo | null>(null);
 
   constructor() {
     void this.store.load();
 
     if (this.api) {
+      void this.api.getAppInfo().then((info) => this.appInfo.set(info));
       void this.api.isWindowMaximized().then((m) => this.maximized.set(m));
       const unsubscribe = this.api.onWindowMaximizedChange((m) => this.maximized.set(m));
       inject(DestroyRef).onDestroy(unsubscribe);

@@ -55,6 +55,13 @@ export interface ImportResult {
 
 export type ExportResult = { saved: false } | { saved: true; path: string; count: number };
 
+export interface AppInfo {
+  /** True when running from source (npm start / npm run electron), not the installed app. */
+  isDev: boolean;
+  /** Folder holding the database and settings. */
+  dataPath: string;
+}
+
 export type FrameListener = (frame: Uint8Array<ArrayBuffer>) => void;
 export type StatusListener = (status: StreamStatus, message?: string) => void;
 
@@ -75,6 +82,7 @@ export interface RtspApi {
   pickImportFile(): Promise<ImportPreview | null>;
   /** Apply the file picked by the last pickImportFile(). */
   applyImport(mode: ImportMode): Promise<ImportResult>;
+  getAppInfo(): Promise<AppInfo>;
   getSetting(key: string): Promise<string | null>;
   setSetting(key: string, value: string): Promise<void>;
   openStream(

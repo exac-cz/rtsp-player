@@ -125,6 +125,16 @@ app-root {
   font-size: 15px;
 }
 
+.dev-badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--warn);
+  color: #1a1300;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
 .brand-dot {
   width: 10px;
   height: 10px;

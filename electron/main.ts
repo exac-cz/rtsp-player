@@ -1,7 +1,15 @@
 import { app, BrowserWindow, dialog, ipcMain, type WebContents } from 'electron';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { Camera, ExportResult, ImportPreview, ImportResult, StreamOptions, TestResult } from './api-types';
+import type {
+  AppInfo,
+  Camera,
+  ExportResult,
+  ImportPreview,
+  ImportResult,
+  StreamOptions,
+  TestResult,
+} from './api-types';
 import { CameraRepository } from './db';
 import { CUSTOM_GRID_SETTING } from './settings-keys';
 import { captureSnapshot, StreamManager } from './streams';
@@ -9,6 +17,14 @@ import { parseImport, sameStreams, serializeExport, type ParsedImport } from './
 import { toCameraInput, toId, toTransport, toUrl } from './validation';
 
 const devServerUrl = process.env['ELECTRON_START_URL'];
+
+// Development builds keep their own data folder (database, settings, encryption key), so they
+// never touch the installed app's cameras or upgrade its database, and both can run side by side
+// (the single-instance lock is per data folder). An explicit --user-data-dir still wins.
+if (!app.isPackaged && !app.commandLine.hasSwitch('user-data-dir')) {
+  app.setPath('userData', path.join(app.getPath('appData'), 'rtsp-player-dev'));
+}
+
 const streams = new StreamManager();
 let repo: CameraRepository;
 let mainWindow: BrowserWindow | null = null;
@@ -121,6 +137,8 @@ function registerIpc(): void {
   ipcMain.handle('cameras:export', (e) => exportCameras(e.sender));
   ipcMain.handle('cameras:import-pick', (e) => pickImportFile(e.sender));
   ipcMain.handle('cameras:import-apply', (e, mode) => applyImport(e.sender, mode));
+
+  ipcMain.handle('app:info', (): AppInfo => ({ isDev: !app.isPackaged, dataPath: app.getPath('userData') }));
 
   ipcMain.handle('settings:get', (_e, key) => repo.getSetting(String(key)));
   ipcMain.handle('settings:set', (_e, key, value) => repo.setSetting(String(key), String(value)));

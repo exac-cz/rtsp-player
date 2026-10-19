@@ -24,6 +24,7 @@ const api: RtspApi = {
   exportCameras: () => ipcRenderer.invoke('cameras:export'),
   pickImportFile: () => ipcRenderer.invoke('cameras:import-pick'),
   applyImport: (mode) => ipcRenderer.invoke('cameras:import-apply', mode),
+  getAppInfo: () => ipcRenderer.invoke('app:info'),
   getSetting: (key) => ipcRenderer.invoke('settings:get', key),
   setSetting: (key, value) => ipcRenderer.invoke('settings:set', key, value),
 

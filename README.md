@@ -42,8 +42,13 @@ src/app/
 
 ## Notes
 
-- Data is stored in `%APPDATA%\rtsp-player\rtsp-player.db`. Camera URLs (which contain passwords) are
-  encrypted with Electron `safeStorage` (Windows DPAPI). Passwords are masked in the UI and in error messages.
+- Data is stored in `%APPDATA%\rtsp-player\rtsp-player.db` for the installed app and in
+  `%APPDATA%\rtsp-player-dev\` when running from source (`npm start` / `npm run electron`, marked with a DEV
+  badge). The two never share cameras or settings and can run side by side; use Export/Import on the Cameras
+  page to copy cameras between them.
+- Camera URLs (which contain passwords) are encrypted with Electron `safeStorage` (Windows DPAPI), with a key
+  tied to that data folder. Passwords are masked in the UI and in error messages; exported JSON files contain
+  them in plain text.
 - SQLite uses Node's built-in `node:sqlite`, so there is no native module to compile.
 - If a camera drops out, the player reconnects automatically every 5 seconds.
 - Re-encoding to MJPEG costs CPU. Set the LQ URL to your camera's sub-stream (for example Dahua
