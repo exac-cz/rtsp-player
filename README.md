@@ -12,7 +12,9 @@ npm run electron # production build, run in Electron
 npm run dist     # build a Windows installer into ./release
 ```
 
-- **Cameras** tab: add/edit/delete/reorder RTSP URLs, with a *Test connection* button that grabs a snapshot.
+- **Cameras** tab: add/edit/delete/reorder cameras, with a *Test connection* button that grabs a snapshot.
+  Each camera has an **HQ URL** (main stream, used in single view) and an **LQ URL** (sub-stream, used in grid
+  view). Only one is required; if just one is set, it is used in both views.
 - **Grid view**: Auto / 1×1 / 2×2 / 3×3 / 4×4 layouts (remembered), paging when there are more cameras than tiles.
   Click a tile to open it.
 - **Single view**: full-resolution stream, ← / → to switch cameras, `F` for fullscreen, snapshot to JPEG.
@@ -29,7 +31,7 @@ than six cameras still work.
 electron/
   main.ts       window, IPC handlers, input validation
   preload.ts    contextBridge API exposed as window.rtspApi
-  db.ts         SQLite (built-in node:sqlite) – cameras + settings tables
+  db.ts         SQLite (built-in node:sqlite) – cameras + settings tables, versioned migrations
   streams.ts    ffmpeg process management, MJPEG frame parsing, snapshots
   api-types.ts  types shared with the Angular app
 src/app/
@@ -44,5 +46,5 @@ src/app/
   encrypted with Electron `safeStorage` (Windows DPAPI). Passwords are masked in the UI and in error messages.
 - SQLite uses Node's built-in `node:sqlite`, so there is no native module to compile.
 - If a camera drops out, the player reconnects automatically every 5 seconds.
-- Re-encoding to MJPEG costs CPU. Point grid tiles at your camera's sub-stream (for example Dahua
-  `subtype=1`, Hikvision `/Streaming/Channels/102`) to keep many cameras smooth.
+- Re-encoding to MJPEG costs CPU. Set the LQ URL to your camera's sub-stream (for example Dahua
+  `subtype=1`, Hikvision `/Streaming/Channels/102`) to keep many cameras smooth in the grid.

@@ -455,6 +455,17 @@ app-root {
   color: var(--danger);
 }
 
+.hint {
+  margin-left: 4px;
+  opacity: 0.7;
+}
+
+.fallback {
+  font-family: system-ui, sans-serif;
+  font-style: italic;
+  opacity: 0.7;
+}
+
 .form-actions {
   display: flex;
   gap: 8px;

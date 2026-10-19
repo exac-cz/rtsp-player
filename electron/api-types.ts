@@ -3,21 +3,30 @@
 
 export type Transport = 'tcp' | 'udp';
 
+/** Which of the camera's streams to play. Falls back to the other one when it has no URL. */
+export type StreamQuality = 'hq' | 'lq';
+
 export interface Camera {
   id: number;
   name: string;
-  url: string;
+  /** High-quality (main) stream, used in single view. Empty string when not set. */
+  hqUrl: string;
+  /** Low-quality (sub) stream, used in grid view. Empty string when not set. */
+  lqUrl: string;
   transport: Transport;
   sortOrder: number;
 }
 
+/** At least one of hqUrl / lqUrl must be filled in. */
 export interface CameraInput {
   name: string;
-  url: string;
+  hqUrl: string;
+  lqUrl: string;
   transport: Transport;
 }
 
 export interface StreamOptions {
+  quality?: StreamQuality;
   /** Downscale frames to at most this width (keeps CPU/IPC low in grid view). */
   maxWidth?: number;
   /** Maximum frames per second delivered to the renderer. */
@@ -41,7 +50,7 @@ export interface RtspApi {
   updateCamera(id: number, input: CameraInput): Promise<Camera>;
   deleteCamera(id: number): Promise<void>;
   reorderCameras(ids: number[]): Promise<Camera[]>;
-  testCamera(input: CameraInput): Promise<TestResult>;
+  testStream(url: string, transport: Transport): Promise<TestResult>;
   getSetting(key: string): Promise<string | null>;
   setSetting(key: string, value: string): Promise<void>;
   openStream(

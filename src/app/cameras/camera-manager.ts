@@ -1,8 +1,28 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import type { Camera, CameraInput, TestResult, Transport } from '../../../electron/api-types';
 import { CameraStore, errorMessage, maskUrl } from '../core/camera-store';
+
+/** Empty, or an rtsp:// / rtsps:// URL. */
+const RTSP_URL = /^\s*(rtsps?:\/\/\S+)?\s*$/i;
+
+function atLeastOneUrl(group: AbstractControl): ValidationErrors | null {
+  const { hqUrl, lqUrl } = group.value as { hqUrl: string; lqUrl: string };
+  return hqUrl.trim() || lqUrl.trim() ? null : { noUrl: true };
+}
+
+interface StreamTest {
+  label: string;
+  result: TestResult;
+}
 
 @Component({
   selector: 'app-camera-manager',
@@ -28,12 +48,24 @@ import { CameraStore, errorMessage, maskUrl } from '../core/camera-store';
           </label>
 
           <label>
-            RTSP URL
-            <input formControlName="url" placeholder="rtsp://user:password@192.168.1.10:554/stream1" spellcheck="false" />
-            @if (form.controls.url.touched && form.controls.url.invalid) {
+            <span>HQ stream URL <span class="hint">· used in single view</span></span>
+            <input formControlName="hqUrl" placeholder="rtsp://user:password@192.168.1.10:554/stream1" spellcheck="false" />
+            @if (form.controls.hqUrl.invalid) {
               <small class="field-error">Enter a URL starting with rtsp:// or rtsps://</small>
             }
           </label>
+
+          <label>
+            <span>LQ stream URL <span class="hint">· used in grid view</span></span>
+            <input formControlName="lqUrl" placeholder="rtsp://user:password@192.168.1.10:554/stream2" spellcheck="false" />
+            @if (form.controls.lqUrl.invalid) {
+              <small class="field-error">Enter a URL starting with rtsp:// or rtsps://</small>
+            }
+          </label>
+
+          <small class="muted">
+            Fill in at least one URL. If only one is set, it is used in both views.
+          </small>
 
           <label>
             Transport
@@ -43,14 +75,14 @@ import { CameraStore, errorMessage, maskUrl } from '../core/camera-store';
             </select>
           </label>
 
-          @if (testResult(); as result) {
-            @if (result.ok) {
+          @for (test of testResults(); track test.label) {
+            @if (test.result.ok) {
               <div class="test-result ok">
-                <span>✔ Connection works</span>
-                <img [src]="result.snapshot" alt="Camera snapshot" />
+                <span>✔ {{ test.label }} stream works</span>
+                <img [src]="test.result.snapshot" [alt]="test.label + ' snapshot'" />
               </div>
             } @else {
-              <div class="test-result error">✖ {{ result.error }}</div>
+              <div class="test-result error">✖ {{ test.label }}: {{ test.result.error }}</div>
             }
           }
           @if (formError(); as err) {
@@ -77,7 +109,8 @@ import { CameraStore, errorMessage, maskUrl } from '../core/camera-store';
           <thead>
             <tr>
               <th>Name</th>
-              <th>URL</th>
+              <th>HQ stream (single view)</th>
+              <th>LQ stream (grid view)</th>
               <th>Transport</th>
               <th class="actions">Actions</th>
             </tr>
@@ -86,7 +119,12 @@ import { CameraStore, errorMessage, maskUrl } from '../core/camera-store';
             @for (cam of store.cameras(); track cam.id; let first = $first, last = $last) {
               <tr>
                 <td>{{ cam.name }}</td>
-                <td class="url">{{ mask(cam.url) }}</td>
+                <td class="url">
+                  @if (cam.hqUrl) { {{ mask(cam.hqUrl) }} } @else { <span class="fallback">uses LQ stream</span> }
+                </td>
+                <td class="url">
+                  @if (cam.lqUrl) { {{ mask(cam.lqUrl) }} } @else { <span class="fallback">uses HQ stream</span> }
+                </td>
                 <td>{{ cam.transport.toUpperCase() }}</td>
                 <td class="actions">
                   <a class="btn small" [routerLink]="['/camera', cam.id]">Watch</a>
@@ -111,20 +149,21 @@ import { CameraStore, errorMessage, maskUrl } from '../core/camera-store';
 export class CameraManager {
   protected readonly store = inject(CameraStore);
 
-  protected readonly form = new FormGroup({
-    name: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    url: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required, Validators.pattern(/^\s*rtsps?:\/\/\S+\s*$/i)],
-    }),
-    transport: new FormControl<Transport>('tcp', { nonNullable: true }),
-  });
+  protected readonly form = new FormGroup(
+    {
+      name: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+      hqUrl: new FormControl('', { nonNullable: true, validators: [Validators.pattern(RTSP_URL)] }),
+      lqUrl: new FormControl('', { nonNullable: true, validators: [Validators.pattern(RTSP_URL)] }),
+      transport: new FormControl<Transport>('tcp', { nonNullable: true }),
+    },
+    { validators: atLeastOneUrl },
+  );
 
   protected readonly formOpen = signal(false);
   protected readonly editingId = signal<number | null>(null);
   protected readonly testing = signal(false);
   protected readonly saving = signal(false);
-  protected readonly testResult = signal<TestResult | null>(null);
+  protected readonly testResults = signal<StreamTest[]>([]);
   protected readonly formError = signal<string | null>(null);
 
   protected readonly mask = maskUrl;
@@ -132,20 +171,20 @@ export class CameraManager {
   constructor() {
     // A stale test result would be misleading once the URL changes.
     this.form.valueChanges.subscribe(() => {
-      this.testResult.set(null);
+      this.testResults.set([]);
       this.formError.set(null);
     });
   }
 
   protected startAdd(): void {
     this.editingId.set(null);
-    this.form.reset({ name: '', url: '', transport: 'tcp' });
+    this.form.reset({ name: '', hqUrl: '', lqUrl: '', transport: 'tcp' });
     this.openForm();
   }
 
   protected startEdit(camera: Camera): void {
     this.editingId.set(camera.id);
-    this.form.reset({ name: camera.name, url: camera.url, transport: camera.transport });
+    this.form.reset({ name: camera.name, hqUrl: camera.hqUrl, lqUrl: camera.lqUrl, transport: camera.transport });
     this.openForm();
   }
 
@@ -154,17 +193,29 @@ export class CameraManager {
     this.editingId.set(null);
   }
 
+  /** Grab a snapshot from every URL that is filled in, in parallel. */
   protected async test(): Promise<void> {
-    if (!this.store.api) return;
+    const api = this.store.api;
+    if (!api) return;
+    const { hqUrl, lqUrl, transport } = this.input();
+    const streams = [
+      { label: 'HQ', url: hqUrl },
+      { label: 'LQ', url: lqUrl },
+    ].filter((s) => s.url);
+
     this.testing.set(true);
-    this.testResult.set(null);
-    try {
-      this.testResult.set(await this.store.api.testCamera(this.input()));
-    } catch (err) {
-      this.testResult.set({ ok: false, error: errorMessage(err) });
-    } finally {
-      this.testing.set(false);
-    }
+    this.testResults.set([]);
+    const results = await Promise.all(
+      streams.map(async ({ label, url }): Promise<StreamTest> => {
+        try {
+          return { label, result: await api.testStream(url, transport) };
+        } catch (err) {
+          return { label, result: { ok: false, error: errorMessage(err) } };
+        }
+      }),
+    );
+    this.testResults.set(results);
+    this.testing.set(false);
   }
 
   protected async save(): Promise<void> {
@@ -193,13 +244,13 @@ export class CameraManager {
   }
 
   private openForm(): void {
-    this.testResult.set(null);
+    this.testResults.set([]);
     this.formError.set(null);
     this.formOpen.set(true);
   }
 
   private input(): CameraInput {
-    const { name, url, transport } = this.form.getRawValue();
-    return { name: name.trim(), url: url.trim(), transport };
+    const { name, hqUrl, lqUrl, transport } = this.form.getRawValue();
+    return { name: name.trim(), hqUrl: hqUrl.trim(), lqUrl: lqUrl.trim(), transport };
   }
 }

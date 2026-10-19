@@ -20,7 +20,7 @@ const api: RtspApi = {
   updateCamera: (id, input) => ipcRenderer.invoke('cameras:update', id, input),
   deleteCamera: (id) => ipcRenderer.invoke('cameras:delete', id),
   reorderCameras: (ids) => ipcRenderer.invoke('cameras:reorder', ids),
-  testCamera: (input) => ipcRenderer.invoke('cameras:test', input),
+  testStream: (url, transport) => ipcRenderer.invoke('cameras:test', url, transport),
   getSetting: (key) => ipcRenderer.invoke('settings:get', key),
   setSetting: (key, value) => ipcRenderer.invoke('settings:set', key, value),
 

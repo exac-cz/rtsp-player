@@ -1,7 +1,13 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import type { WebContents } from 'electron';
 import ffmpegStatic from 'ffmpeg-static';
-import type { CameraInput, StreamOptions, StreamStatus, TestResult } from './api-types';
+import type { StreamOptions, StreamStatus, TestResult, Transport } from './api-types';
+
+/** A single RTSP stream to open: one of the camera's URLs plus its transport. */
+export interface StreamSource {
+  url: string;
+  transport: Transport;
+}
 
 const CONNECT_TIMEOUT_US = '10000000'; // 10 s, ffmpeg expects microseconds
 const SNAPSHOT_TIMEOUT_MS = 15000;
@@ -18,16 +24,16 @@ export function maskCredentials(text: string): string {
   return text.replace(/(rtsps?:\/\/[^:/@\s]+):[^@/\s]+@/gi, '$1:***@');
 }
 
-function inputArgs(camera: CameraInput): string[] {
+function inputArgs(source: StreamSource): string[] {
   return [
     '-hide_banner',
     '-loglevel', 'error',
     '-nostdin',
-    '-rtsp_transport', camera.transport,
+    '-rtsp_transport', source.transport,
     '-timeout', CONNECT_TIMEOUT_US,
     '-fflags', 'nobuffer',
     '-flags', 'low_delay',
-    '-i', camera.url,
+    '-i', source.url,
     '-an', '-sn', '-dn',
   ];
 }
@@ -88,7 +94,7 @@ export class StreamManager {
   private readonly active = new Map<string, ActiveStream>();
   private readonly tracked = new WeakSet<WebContents>();
 
-  start(owner: WebContents, streamId: number, camera: CameraInput, options: StreamOptions): void {
+  start(owner: WebContents, streamId: number, source: StreamSource, options: StreamOptions): void {
     const key = `${owner.id}:${streamId}`;
     this.stopKey(key);
     this.track(owner);
@@ -100,7 +106,7 @@ export class StreamManager {
 
     const fps = options.fps ?? 15;
     const args = [
-      ...inputArgs(camera),
+      ...inputArgs(source),
       '-vf', scaleFilter(options.maxWidth),
       // Caps the rate without duplicating frames from slower cameras.
       '-fpsmax', String(fps),
@@ -186,13 +192,13 @@ export class StreamManager {
 }
 
 /** Grab a single frame to verify that a camera URL works. */
-export function captureSnapshot(camera: CameraInput): Promise<TestResult> {
+export function captureSnapshot(source: StreamSource): Promise<TestResult> {
   return new Promise((resolve) => {
     let proc: ChildProcess;
     try {
       proc = spawn(
         ffmpegPath(),
-        [...inputArgs(camera), '-vf', scaleFilter(640), '-frames:v', '1', '-c:v', 'mjpeg', '-f', 'image2', '-'],
+        [...inputArgs(source), '-vf', scaleFilter(640), '-frames:v', '1', '-c:v', 'mjpeg', '-f', 'image2', '-'],
         { windowsHide: true },
       );
     } catch (err) {

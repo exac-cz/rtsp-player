@@ -23,7 +23,7 @@ import { CameraPlayer } from '../player/camera-player';
     <div class="single-layout">
       <div class="stage" #stage>
         @if (camera(); as cam) {
-          <app-camera-player [camera]="cam" [maxWidth]="1920" [fps]="25" />
+          <app-camera-player [camera]="cam" quality="hq" [maxWidth]="1920" [fps]="25" />
         } @else if (store.loaded()) {
           <div class="empty-state">
             <h2>Camera not found</h2>

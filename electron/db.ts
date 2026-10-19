@@ -5,7 +5,8 @@ import type { Camera, CameraInput, Transport } from './api-types';
 interface CameraRow {
   id: number;
   name: string;
-  url: string;
+  hq_url: string;
+  lq_url: string;
   transport: Transport;
   sort_order: number;
 }
@@ -15,7 +16,7 @@ const ENCRYPTED_PREFIX = 'enc:';
 // RTSP URLs usually contain the camera password, so encrypt them at rest with the
 // OS keychain (DPAPI on Windows) whenever it is available.
 function encryptUrl(url: string): string {
-  if (!safeStorage.isEncryptionAvailable()) return url;
+  if (!url || !safeStorage.isEncryptionAvailable()) return url;
   return ENCRYPTED_PREFIX + safeStorage.encryptString(url).toString('base64');
 }
 
@@ -28,7 +29,8 @@ function toCamera(row: CameraRow): Camera {
   return {
     id: row.id,
     name: row.name,
-    url: decryptUrl(row.url),
+    hqUrl: decryptUrl(row.hq_url),
+    lqUrl: decryptUrl(row.lq_url),
     transport: row.transport,
     sortOrder: row.sort_order,
   };
@@ -62,6 +64,14 @@ export class CameraRepository {
         PRAGMA user_version = 1;
       `);
     }
+    if (user_version < 2) {
+      // v2: separate high- and low-quality stream URLs; the original URL becomes the HQ one.
+      this.db.exec(`
+        ALTER TABLE cameras RENAME COLUMN url TO hq_url;
+        ALTER TABLE cameras ADD COLUMN lq_url TEXT NOT NULL DEFAULT '';
+        PRAGMA user_version = 2;
+      `);
+    }
   }
 
   list(): Camera[] {
@@ -79,15 +89,15 @@ export class CameraRepository {
       next: number;
     };
     const result = this.db
-      .prepare('INSERT INTO cameras (name, url, transport, sort_order) VALUES (?, ?, ?, ?)')
-      .run(input.name, encryptUrl(input.url), input.transport, next);
+      .prepare('INSERT INTO cameras (name, hq_url, lq_url, transport, sort_order) VALUES (?, ?, ?, ?, ?)')
+      .run(input.name, encryptUrl(input.hqUrl), encryptUrl(input.lqUrl), input.transport, next);
     return this.get(Number(result.lastInsertRowid))!;
   }
 
   update(id: number, input: CameraInput): Camera {
     const result = this.db
-      .prepare('UPDATE cameras SET name = ?, url = ?, transport = ? WHERE id = ?')
-      .run(input.name, encryptUrl(input.url), input.transport, id);
+      .prepare('UPDATE cameras SET name = ?, hq_url = ?, lq_url = ?, transport = ? WHERE id = ?')
+      .run(input.name, encryptUrl(input.hqUrl), encryptUrl(input.lqUrl), input.transport, id);
     if (result.changes === 0) throw new Error(`Camera ${id} not found`);
     return this.get(id)!;
   }

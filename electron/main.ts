@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
-import type { CameraInput, StreamOptions, TestResult } from './api-types';
+import type { Camera, CameraInput, StreamOptions, TestResult, Transport } from './api-types';
 import { CameraRepository } from './db';
 import { captureSnapshot, StreamManager } from './streams';
 
@@ -15,20 +15,40 @@ function toId(value: unknown): number {
   return id;
 }
 
+function toUrl(value: unknown, label: string): string {
+  const url = typeof value === 'string' ? value.trim() : '';
+  if (url && !/^rtsps?:\/\/\S+$/i.test(url)) throw new Error(`${label} must start with rtsp:// or rtsps://`);
+  return url;
+}
+
+function toTransport(value: unknown): Transport {
+  return value === 'udp' ? 'udp' : 'tcp';
+}
+
 function toCameraInput(value: unknown): CameraInput {
   const input = (value ?? {}) as Partial<Record<keyof CameraInput, unknown>>;
   const name = typeof input.name === 'string' ? input.name.trim() : '';
-  const url = typeof input.url === 'string' ? input.url.trim() : '';
   if (!name) throw new Error('Camera name is required');
-  if (!/^rtsps?:\/\/\S+$/i.test(url)) throw new Error('URL must start with rtsp:// or rtsps://');
-  return { name, url, transport: input.transport === 'udp' ? 'udp' : 'tcp' };
+  const hqUrl = toUrl(input.hqUrl, 'HQ URL');
+  const lqUrl = toUrl(input.lqUrl, 'LQ URL');
+  if (!hqUrl && !lqUrl) throw new Error('Enter at least one stream URL');
+  return { name, hqUrl, lqUrl, transport: toTransport(input.transport) };
+}
+
+/** Pick the requested stream, falling back to the other one when only one URL is set. */
+function streamUrl(camera: Camera, quality: StreamOptions['quality']): string {
+  return quality === 'lq' ? camera.lqUrl || camera.hqUrl : camera.hqUrl || camera.lqUrl;
 }
 
 function toStreamOptions(value: unknown): StreamOptions {
   const opts = (value ?? {}) as Partial<Record<keyof StreamOptions, unknown>>;
   const clamp = (v: unknown, min: number, max: number) =>
     typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : undefined;
-  return { maxWidth: clamp(opts.maxWidth, 160, 3840), fps: clamp(opts.fps, 1, 30) };
+  return {
+    quality: opts.quality === 'lq' ? 'lq' : 'hq',
+    maxWidth: clamp(opts.maxWidth, 160, 3840),
+    fps: clamp(opts.fps, 1, 30),
+  };
 }
 
 function registerIpc(): void {
@@ -37,9 +57,11 @@ function registerIpc(): void {
   ipcMain.handle('cameras:update', (_e, id, input) => repo.update(toId(id), toCameraInput(input)));
   ipcMain.handle('cameras:delete', (_e, id) => repo.remove(toId(id)));
   ipcMain.handle('cameras:reorder', (_e, ids) => repo.reorder((ids as unknown[]).map(toId)));
-  ipcMain.handle('cameras:test', async (_e, input): Promise<TestResult> => {
+  ipcMain.handle('cameras:test', async (_e, url, transport): Promise<TestResult> => {
     try {
-      return await captureSnapshot(toCameraInput(input));
+      const source = toUrl(url, 'URL');
+      if (!source) throw new Error('URL is required');
+      return await captureSnapshot({ url: source, transport: toTransport(transport) });
     } catch (err) {
       return { ok: false, error: (err as Error).message };
     }
@@ -54,7 +76,8 @@ function registerIpc(): void {
       e.sender.send('stream:status', streamId, 'error', 'Camera not found');
       return;
     }
-    streams.start(e.sender, toId(streamId), camera, toStreamOptions(options));
+    const opts = toStreamOptions(options);
+    streams.start(e.sender, toId(streamId), { url: streamUrl(camera, opts.quality), transport: camera.transport }, opts);
   });
   ipcMain.on('stream:stop', (e, streamId) => streams.stop(e.sender, toId(streamId)));
 }

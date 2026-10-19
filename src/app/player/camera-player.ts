@@ -9,7 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { Camera, StreamStatus } from '../../../electron/api-types';
+import type { Camera, StreamQuality, StreamStatus } from '../../../electron/api-types';
 import { CameraStore } from '../core/camera-store';
 
 const RETRY_DELAY_MS = 5000;
@@ -47,6 +47,7 @@ const RETRY_DELAY_MS = 5000;
 })
 export class CameraPlayer {
   readonly camera = input.required<Camera>();
+  readonly quality = input<StreamQuality>('hq');
   readonly maxWidth = input<number | undefined>(undefined);
   readonly fps = input(15);
   readonly showLabel = input(true);
@@ -61,7 +62,7 @@ export class CameraPlayer {
   // Restart the stream only when something that affects it actually changes.
   private readonly streamKey = computed(() => {
     const cam = this.camera();
-    return `${cam.id}|${cam.url}|${cam.transport}|${this.maxWidth() ?? ''}|${this.fps()}`;
+    return `${cam.id}|${cam.hqUrl}|${cam.lqUrl}|${cam.transport}|${this.quality()}|${this.maxWidth() ?? ''}|${this.fps()}`;
   });
   private decoding = false;
 
@@ -79,7 +80,7 @@ export class CameraPlayer {
       let retryTimer: ReturnType<typeof setTimeout> | undefined;
       const handle = api.openStream(
         this.camera().id,
-        { maxWidth: this.maxWidth(), fps: this.fps() },
+        { quality: this.quality(), maxWidth: this.maxWidth(), fps: this.fps() },
         (frame) => void this.draw(frame),
         (status, message) => {
           this.status.set(status);

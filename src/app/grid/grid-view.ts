@@ -53,6 +53,7 @@ const AUTO_MAX_TILES = 16;
           <app-camera-player
             class="tile"
             [camera]="camera"
+            quality="lq"
             [maxWidth]="streamWidth()"
             [fps]="12"
             (click)="open(camera)"
