@@ -36,6 +36,7 @@ interface StreamTest {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './camera-manager.html',
+  styleUrl: './camera-manager.scss',
 })
 export class CameraManager {
   protected readonly store = inject(CameraStore);

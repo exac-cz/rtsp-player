@@ -24,6 +24,7 @@ const AUTO_MAX_TILES = 16;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CameraPlayer, CustomGridEditor, RouterLink],
   templateUrl: './grid-view.html',
+  styleUrl: './grid-view.scss',
 })
 export class GridView {
   protected readonly store = inject(CameraStore);

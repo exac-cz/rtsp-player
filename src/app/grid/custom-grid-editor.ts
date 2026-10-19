@@ -5,8 +5,8 @@ import type { Camera } from '../../../electron/api-types';
 @Component({
   selector: 'app-custom-grid-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'grid-editor' },
   templateUrl: './custom-grid-editor.html',
+  styleUrl: './custom-grid-editor.scss',
 })
 export class CustomGridEditor {
   readonly cameras = input.required<Camera[]>();

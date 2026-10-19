@@ -1,0 +1,53 @@
+:host {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.single-layout {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.stage {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  background: #000;
+
+  app-camera-player {
+    flex: 1;
+  }
+}
+
+.camera-list {
+  width: 220px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding: 8px;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+
+  a {
+    display: block;
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    color: var(--muted);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &:hover {
+      color: var(--text);
+      background: var(--surface-2);
+    }
+
+    &.active {
+      color: #fff;
+      background: var(--accent);
+    }
+  }
+}

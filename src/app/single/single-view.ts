@@ -9,6 +9,7 @@ import { CameraPlayer } from '../player/camera-player';
   imports: [CameraPlayer, RouterLink],
   host: { '(window:keydown)': 'onKey($event)' },
   templateUrl: './single-view.html',
+  styleUrl: './single-view.scss',
 })
 export class SingleView {
   /** Route parameter, bound via withComponentInputBinding(). */

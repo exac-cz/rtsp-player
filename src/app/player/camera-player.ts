@@ -18,7 +18,7 @@ const RETRY_DELAY_MS = 5000;
   selector: 'app-camera-player',
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './camera-player.html',
-  host: { class: 'camera-player' },
+  styleUrl: './camera-player.scss',
 })
 export class CameraPlayer {
   readonly camera = input.required<Camera>();
