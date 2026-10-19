@@ -12,16 +12,17 @@ import { Router, RouterLink } from '@angular/router';
 import type { Camera, StreamQuality } from '../../../electron/api-types';
 import { CameraStore } from '../core/camera-store';
 import { CameraPlayer } from '../player/camera-player';
+import { CustomGridEditor } from './custom-grid-editor';
 
-type Layout = 'auto' | '1' | '2' | '3' | '4';
+type Layout = 'custom' | 'auto' | '1' | '2' | '3' | '4';
 
-const LAYOUT_SETTING = 'grid.layout';
+const CUSTOM_GRID_SETTING = 'grid.custom';
 const AUTO_MAX_TILES = 16;
 
 @Component({
   selector: 'app-grid-view',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CameraPlayer, RouterLink],
+  imports: [CameraPlayer, CustomGridEditor, RouterLink],
   template: `
     <div class="toolbar">
       <div class="segmented" role="group" aria-label="Grid layout">
@@ -31,6 +32,12 @@ const AUTO_MAX_TILES = 16;
           </button>
         }
       </div>
+
+      @if (layout() === 'custom') {
+        <button type="button" class="btn" [class.active]="editing()" (click)="editing.set(!editing())" [disabled]="!cameras().length">
+          ✎ Edit
+        </button>
+      }
 
       <div class="segmented" role="group" aria-label="Stream quality">
         <button type="button" [class.active]="quality() === 'lq'" (click)="quality.set('lq')" title="Low-quality sub-streams">LQ</button>
@@ -47,44 +54,65 @@ const AUTO_MAX_TILES = 16;
 
       <span class="spacer"></span>
       <span class="muted">Click a camera to open it</span>
-      <button type="button" class="btn" (click)="reloadAll()" [disabled]="!cameras().length" title="Reconnect all visible streams">⟳ Reload</button>
-      <button type="button" class="btn" (click)="fullscreen()" [disabled]="!cameras().length">⛶ Fullscreen</button>
+      <button type="button" class="btn" (click)="reloadAll()" [disabled]="!visibleCameras().length" title="Reconnect all visible streams">⟳ Reload</button>
+      <button type="button" class="btn" (click)="fullscreen()" [disabled]="!visibleCameras().length">⛶ Fullscreen</button>
     </div>
 
-    @if (store.loaded() && !cameras().length) {
-      <div class="empty-state">
-        <h2>No cameras yet</h2>
-        <p>Add the RTSP URLs of your CCTV cameras to start watching.</p>
-        <a class="btn primary" routerLink="/cameras">Add a camera</a>
-      </div>
-    } @else {
-      <div
-        #grid
-        class="camera-grid"
-        [style.grid-template-columns]="'repeat(' + columns() + ', minmax(0, 1fr))'"
-        [style.grid-template-rows]="'repeat(' + rows() + ', minmax(0, 1fr))'"
-      >
-        @for (camera of visibleCameras(); track camera.id) {
-          <app-camera-player
-            class="tile"
-            [camera]="camera"
-            [quality]="quality()"
-            [maxWidth]="streamWidth()"
-            [fps]="12"
-            (click)="open(camera)"
-            [title]="'Open ' + camera.name"
-          />
-        }
-      </div>
-    }
+    <div class="grid-body">
+      @if (store.loaded() && !cameras().length) {
+        <div class="empty-state">
+          <h2>No cameras yet</h2>
+          <p>Add the RTSP URLs of your CCTV cameras to start watching.</p>
+          <a class="btn primary" routerLink="/cameras">Add a camera</a>
+        </div>
+      } @else if (layout() === 'custom' && !gridCameras().length) {
+        <div class="empty-state">
+          <h2>Your custom grid is empty</h2>
+          <p>Choose which cameras to show and in what order.</p>
+          @if (!editing()) {
+            <button type="button" class="btn primary" (click)="editing.set(true)">✎ Choose cameras</button>
+          }
+        </div>
+      } @else {
+        <div
+          #grid
+          class="camera-grid"
+          [style.grid-template-columns]="'repeat(' + columns() + ', minmax(0, 1fr))'"
+          [style.grid-template-rows]="'repeat(' + rows() + ', minmax(0, 1fr))'"
+        >
+          @for (camera of visibleCameras(); track camera.id) {
+            <app-camera-player
+              class="tile"
+              [camera]="camera"
+              [quality]="quality()"
+              [maxWidth]="streamWidth()"
+              [fps]="12"
+              (click)="open(camera)"
+              [title]="'Open ' + camera.name"
+            />
+          }
+        </div>
+      }
+
+      @if (editing() && layout() === 'custom') {
+        <app-custom-grid-editor
+          [cameras]="cameras()"
+          [selectedIds]="customIds()"
+          (save)="saveCustom($event)"
+          (cancel)="editing.set(false)"
+        />
+      }
+    </div>
   `,
 })
 export class GridView {
   protected readonly store = inject(CameraStore);
   private readonly router = inject(Router);
   private readonly gridEl = viewChild<ElementRef<HTMLElement>>('grid');
+  private readonly players = viewChildren(CameraPlayer);
 
   protected readonly layouts: { value: Layout; label: string }[] = [
+    { value: 'custom', label: 'Custom' },
     { value: 'auto', label: 'Auto' },
     { value: '1', label: '1×1' },
     { value: '2', label: '2×2' },
@@ -92,37 +120,52 @@ export class GridView {
     { value: '4', label: '4×4' },
   ];
 
-  protected readonly layout = signal<Layout>('auto');
+  /** The custom grid is the default view every time the app starts. */
+  protected readonly layout = signal<Layout>('custom');
   /** Grid starts on the light sub-streams; HQ is opt-in because it costs much more CPU. */
   protected readonly quality = signal<StreamQuality>('lq');
+  protected readonly editing = signal(false);
   private readonly page = signal(0);
-  private readonly players = viewChildren(CameraPlayer);
+  /** Saved custom selection; null until the user saves one (then the custom grid shows every camera). */
+  private readonly savedCustomIds = signal<number[] | null>(null);
 
   protected readonly cameras = this.store.cameras;
 
-  private readonly pageSize = computed(() => {
-    const layout = this.layout();
-    return layout === 'auto' ? AUTO_MAX_TILES : Number(layout) ** 2;
+  /** Custom selection resolved against the current cameras (deleted cameras drop out). */
+  protected readonly customIds = computed(() => {
+    const existing = new Set(this.cameras().map((c) => c.id));
+    const saved = this.savedCustomIds();
+    return saved ? saved.filter((id) => existing.has(id)) : [...existing];
   });
 
-  protected readonly pageCount = computed(() => Math.max(1, Math.ceil(this.cameras().length / this.pageSize())));
+  /** Cameras shown by the current layout, before paging. */
+  protected readonly gridCameras = computed(() => {
+    if (this.layout() !== 'custom') return this.cameras();
+    const byId = new Map(this.cameras().map((c) => [c.id, c]));
+    return this.customIds().flatMap((id) => byId.get(id) ?? []);
+  });
+
+  /** Custom and Auto pick the column count from the number of cameras; the others are fixed. */
+  private readonly isFlexible = computed(() => this.layout() === 'custom' || this.layout() === 'auto');
+
+  private readonly pageSize = computed(() => (this.isFlexible() ? AUTO_MAX_TILES : Number(this.layout()) ** 2));
+
+  protected readonly pageCount = computed(() => Math.max(1, Math.ceil(this.gridCameras().length / this.pageSize())));
   protected readonly currentPage = computed(() => Math.min(this.page(), this.pageCount() - 1));
 
   protected readonly visibleCameras = computed(() => {
     const size = this.pageSize();
     const start = this.currentPage() * size;
-    return this.cameras().slice(start, start + size);
+    return this.gridCameras().slice(start, start + size);
   });
 
   protected readonly columns = computed(() => {
-    const layout = this.layout();
-    if (layout !== 'auto') return Number(layout);
+    if (!this.isFlexible()) return Number(this.layout());
     return Math.max(1, Math.ceil(Math.sqrt(this.visibleCameras().length)));
   });
 
   protected readonly rows = computed(() => {
-    const layout = this.layout();
-    if (layout !== 'auto') return Number(layout);
+    if (!this.isFlexible()) return Number(this.layout());
     return Math.max(1, Math.ceil(this.visibleCameras().length / this.columns()));
   });
 
@@ -134,15 +177,28 @@ export class GridView {
   });
 
   constructor() {
-    void this.store.getSetting(LAYOUT_SETTING).then((saved) => {
-      if (saved && this.layouts.some((l) => l.value === saved)) this.layout.set(saved as Layout);
+    void this.store.getSetting(CUSTOM_GRID_SETTING).then((saved) => {
+      if (!saved) return;
+      try {
+        const ids = JSON.parse(saved) as unknown;
+        if (Array.isArray(ids)) this.savedCustomIds.set(ids.filter((id): id is number => Number.isInteger(id)));
+      } catch {
+        // Ignore a corrupt setting; the custom grid falls back to all cameras.
+      }
     });
   }
 
   protected setLayout(layout: Layout): void {
     this.layout.set(layout);
     this.page.set(0);
-    void this.store.setSetting(LAYOUT_SETTING, layout);
+    if (layout !== 'custom') this.editing.set(false);
+  }
+
+  protected async saveCustom(ids: number[]): Promise<void> {
+    this.savedCustomIds.set(ids);
+    this.editing.set(false);
+    this.page.set(0);
+    await this.store.setSetting(CUSTOM_GRID_SETTING, JSON.stringify(ids));
   }
 
   protected goToPage(page: number): void {
