@@ -17,32 +17,7 @@ const RETRY_DELAY_MS = 5000;
 @Component({
   selector: 'app-camera-player',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <canvas #canvas [class.hidden]="!hasFrame()"></canvas>
-
-    @if (status() !== 'playing') {
-      <div class="player-overlay">
-        @switch (status()) {
-          @case ('connecting') {
-            <div class="spinner"></div>
-            <span>Connecting…</span>
-          }
-          @default {
-            <span class="player-error">{{ message() || 'Stream ended' }}</span>
-            <span class="muted">Retrying in a few seconds</span>
-            <button type="button" class="btn small" (click)="reconnect($event)">Retry now</button>
-          }
-        }
-      </div>
-    }
-
-    @if (showLabel()) {
-      <div class="player-label">
-        <span class="dot" [class]="status()"></span>
-        {{ camera().name }}
-      </div>
-    }
-  `,
+  templateUrl: './camera-player.html',
   host: { class: 'camera-player' },
 })
 export class CameraPlayer {
