@@ -18,6 +18,13 @@ architecture and commands.
 
 ## Code conventions
 
+- **Code must pass `npm run lint`** (ESLint: typescript-eslint recommended + stylistic, angular-eslint
+  incl. template accessibility; covers `src/` and `electron/`). Fix the cause rather than disabling a rule;
+  if a rule really has to be disabled, do it on the line with a comment saying why.
+- **Formatting is Prettier's** (`.prettierrc`, 100 columns, single quotes): run `npm run format` before
+  committing; `npm run format:check` must pass. Use a bare `// prettier-ignore` line only where manual
+  alignment carries meaning (e.g. ffmpeg option/value pairs in `electron/streams.ts`).
+
 - **Component templates live in their own `.html` file** next to the component, referenced with
   `templateUrl` (e.g. `camera-player.ts` + `camera-player.html`). No inline `template:` strings.
 - **Component styles live in their own `.scss` file** next to the component, referenced with `styleUrl`.

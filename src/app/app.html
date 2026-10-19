@@ -3,7 +3,9 @@
   <span class="brand">
     <span class="brand-dot"></span> RTSP Player
     @if (appInfo()?.isDev) {
-      <span class="dev-badge" [title]="'Development version — data in ' + appInfo()?.dataPath">DEV</span>
+      <span class="dev-badge" [title]="'Development version — data in ' + appInfo()?.dataPath"
+        >DEV</span
+      >
     }
   </span>
   <nav>
@@ -24,12 +26,20 @@
         [attr.aria-label]="maximized() ? 'Restore' : 'Maximize'"
       >
         @if (maximized()) {
-          <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2.5 2.5V.5h7v7h-2M.5 2.5h7v7h-7z" /></svg>
+          <svg viewBox="0 0 10 10" aria-hidden="true">
+            <path d="M2.5 2.5V.5h7v7h-2M.5 2.5h7v7h-7z" />
+          </svg>
         } @else {
           <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M.5.5h9v9h-9z" /></svg>
         }
       </button>
-      <button type="button" class="close" (click)="api.closeWindow()" title="Close" aria-label="Close">
+      <button
+        type="button"
+        class="close"
+        (click)="api.closeWindow()"
+        title="Close"
+        aria-label="Close"
+      >
         <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M0 0l10 10M10 0L0 10" /></svg>
       </button>
     </div>

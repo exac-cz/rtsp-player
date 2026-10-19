@@ -50,7 +50,9 @@ async function exportCameras(sender: WebContents): Promise<ExportResult> {
     defaultPath: path.join(app.getPath('documents'), 'rtsp-cameras.json'),
     filters: JSON_FILTERS,
   };
-  const { canceled, filePath } = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options);
+  const { canceled, filePath } = win
+    ? await dialog.showSaveDialog(win, options)
+    : await dialog.showSaveDialog(options);
   if (canceled || !filePath) return { saved: false };
   await writeFile(filePath, serializeExport(cameras, savedCustomGrid()), 'utf8');
   return { saved: true, path: filePath, count: cameras.length };
@@ -64,7 +66,9 @@ async function pickImportFile(sender: WebContents): Promise<ImportPreview | null
     filters: JSON_FILTERS,
     properties: ['openFile' as const],
   };
-  const { canceled, filePaths } = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
+  const { canceled, filePaths } = win
+    ? await dialog.showOpenDialog(win, options)
+    : await dialog.showOpenDialog(options);
   if (canceled || !filePaths[0]) return null;
 
   const parsed = parseImport(await readFile(filePaths[0], 'utf8'));
@@ -86,7 +90,8 @@ function applyImport(sender: WebContents, mode: unknown): ImportResult {
   if (mode === 'replace') {
     const ids = repo.importCameras(parsed.cameras, true);
     // Restore the Custom grid from the file; without one, Custom shows every camera.
-    if (parsed.customGrid) repo.setSetting(CUSTOM_GRID_SETTING, JSON.stringify(parsed.customGrid.map((i) => ids[i])));
+    if (parsed.customGrid)
+      repo.setSetting(CUSTOM_GRID_SETTING, JSON.stringify(parsed.customGrid.map((i) => ids[i])));
     else repo.deleteSetting(CUSTOM_GRID_SETTING);
     return { added: ids.length, skipped: 0 };
   }
@@ -110,7 +115,9 @@ function streamUrl(camera: Camera, quality: StreamOptions['quality']): string {
 function toStreamOptions(value: unknown): StreamOptions {
   const opts = (value ?? {}) as Partial<Record<keyof StreamOptions, unknown>>;
   const clamp = (v: unknown, min: number, max: number) =>
-    typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : undefined;
+    typeof v === 'number' && Number.isFinite(v)
+      ? Math.min(max, Math.max(min, Math.round(v)))
+      : undefined;
   return {
     quality: opts.quality === 'lq' ? 'lq' : 'hq',
     maxWidth: clamp(opts.maxWidth, 160, 3840),
@@ -138,7 +145,10 @@ function registerIpc(): void {
   ipcMain.handle('cameras:import-pick', (e) => pickImportFile(e.sender));
   ipcMain.handle('cameras:import-apply', (e, mode) => applyImport(e.sender, mode));
 
-  ipcMain.handle('app:info', (): AppInfo => ({ isDev: !app.isPackaged, dataPath: app.getPath('userData') }));
+  ipcMain.handle('app:info', (): AppInfo => ({
+    isDev: !app.isPackaged,
+    dataPath: app.getPath('userData'),
+  }));
 
   ipcMain.handle('settings:get', (_e, key) => repo.getSetting(String(key)));
   ipcMain.handle('settings:set', (_e, key, value) => repo.setSetting(String(key), String(value)));
@@ -150,7 +160,12 @@ function registerIpc(): void {
       return;
     }
     const opts = toStreamOptions(options);
-    streams.start(e.sender, toId(streamId), { url: streamUrl(camera, opts.quality), transport: camera.transport }, opts);
+    streams.start(
+      e.sender,
+      toId(streamId),
+      { url: streamUrl(camera, opts.quality), transport: camera.transport },
+      opts,
+    );
   });
   ipcMain.on('stream:stop', (e, streamId) => streams.stop(e.sender, toId(streamId)));
 
@@ -163,7 +178,10 @@ function registerIpc(): void {
     else win.maximize();
   });
   ipcMain.on('window:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close());
-  ipcMain.handle('window:is-maximized', (e) => BrowserWindow.fromWebContents(e.sender)?.isMaximized() ?? false);
+  ipcMain.handle(
+    'window:is-maximized',
+    (e) => BrowserWindow.fromWebContents(e.sender)?.isMaximized() ?? false,
+  );
 }
 
 function createWindow(): void {

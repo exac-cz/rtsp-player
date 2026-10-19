@@ -28,7 +28,12 @@ export function serializeExport(cameras: Camera[], customGridIds: number[] | nul
     format: FORMAT,
     version: VERSION,
     exportedAt: new Date().toISOString(),
-    cameras: cameras.map(({ name, hqUrl, lqUrl, transport }) => ({ name, hqUrl, lqUrl, transport })),
+    cameras: cameras.map(({ name, hqUrl, lqUrl, transport }) => ({
+      name,
+      hqUrl,
+      lqUrl,
+      transport,
+    })),
     customGrid: customGridIds ? customGridIds.flatMap((id) => indexById.get(id) ?? []) : null,
   };
   return JSON.stringify(file, null, 2) + '\n';
@@ -44,7 +49,9 @@ export function parseImport(text: string): ParsedImport {
   }
 
   // Accept a bare array of cameras too, for hand-written files.
-  const root = (Array.isArray(data) ? { cameras: data } : data) as Partial<Record<keyof ExportFile, unknown>> | null;
+  const root = (Array.isArray(data) ? { cameras: data } : data) as Partial<
+    Record<keyof ExportFile, unknown>
+  > | null;
   if (!root || typeof root !== 'object' || !Array.isArray(root.cameras)) {
     throw new Error('The file does not contain a camera list.');
   }
@@ -59,19 +66,24 @@ export function parseImport(text: string): ParsedImport {
     try {
       return toCameraInput(value);
     } catch (err) {
-      throw new Error(`Camera ${i + 1}: ${(err as Error).message}`);
+      throw new Error(`Camera ${i + 1}: ${(err as Error).message}`, { cause: err });
     }
   });
   if (!cameras.length) throw new Error('The file contains no cameras.');
 
   const customGrid = Array.isArray(root.customGrid)
-    ? root.customGrid.filter((i): i is number => Number.isInteger(i) && i >= 0 && i < cameras.length)
+    ? root.customGrid.filter(
+        (i): i is number => Number.isInteger(i) && i >= 0 && i < cameras.length,
+      )
     : null;
 
   return { cameras, customGrid };
 }
 
 /** Two cameras are the same when they point at the same streams. */
-export function sameStreams(a: Pick<CameraInput, 'hqUrl' | 'lqUrl'>, b: Pick<CameraInput, 'hqUrl' | 'lqUrl'>): boolean {
+export function sameStreams(
+  a: Pick<CameraInput, 'hqUrl' | 'lqUrl'>,
+  b: Pick<CameraInput, 'hqUrl' | 'lqUrl'>,
+): boolean {
   return a.hqUrl === b.hqUrl && a.lqUrl === b.lqUrl;
 }

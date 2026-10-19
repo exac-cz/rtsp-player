@@ -1,14 +1,28 @@
 <div class="toolbar">
   <h2 class="toolbar-title">Cameras</h2>
   <span class="spacer"></span>
-  <button type="button" class="btn" (click)="pickImport()" [disabled]="!store.api || transferBusy()" title="Add cameras from a JSON file">
+  <button
+    type="button"
+    class="btn"
+    (click)="pickImport()"
+    [disabled]="!store.api || transferBusy()"
+    title="Add cameras from a JSON file"
+  >
     ⇩ Import
   </button>
-  <button type="button" class="btn" (click)="exportCameras()" [disabled]="!store.cameras().length || transferBusy()" title="Save all cameras to a JSON file">
+  <button
+    type="button"
+    class="btn"
+    (click)="exportCameras()"
+    [disabled]="!store.cameras().length || transferBusy()"
+    title="Save all cameras to a JSON file"
+  >
     ⇧ Export
   </button>
   @if (!formOpen()) {
-    <button type="button" class="btn primary" (click)="startAdd()" [disabled]="!store.api">+ Add camera</button>
+    <button type="button" class="btn primary" (click)="startAdd()" [disabled]="!store.api">
+      + Add camera
+    </button>
   }
 </div>
 
@@ -23,10 +37,20 @@
         }
       </p>
       <div class="form-actions">
-        <button type="button" class="btn primary" (click)="applyImport('merge')" [disabled]="transferBusy() || preview.duplicates >= preview.total">
+        <button
+          type="button"
+          class="btn primary"
+          (click)="applyImport('merge')"
+          [disabled]="transferBusy() || preview.duplicates >= preview.total"
+        >
           Add {{ preview.total - preview.duplicates }} new
         </button>
-        <button type="button" class="btn danger" (click)="applyImport('replace')" [disabled]="transferBusy()">
+        <button
+          type="button"
+          class="btn danger"
+          (click)="applyImport('replace')"
+          [disabled]="transferBusy()"
+        >
           Replace all cameras
         </button>
         <span class="spacer"></span>
@@ -34,7 +58,11 @@
       </div>
       <small class="muted">
         “Replace all” deletes your current {{ store.cameras().length }} cameras
-        {{ preview.hasCustomGrid ? 'and restores the Custom grid from the file.' : 'and resets the Custom grid to show all cameras.' }}
+        {{
+          preview.hasCustomGrid
+            ? 'and restores the Custom grid from the file.'
+            : 'and resets the Custom grid to show all cameras.'
+        }}
       </small>
     </div>
   }
@@ -52,12 +80,16 @@
 
       <label>
         Name
-        <input formControlName="name" placeholder="Front door" autofocus />
+        <input #nameInput formControlName="name" placeholder="Front door" />
       </label>
 
       <label>
         <span>HQ stream URL <span class="hint">· used in single view</span></span>
-        <input formControlName="hqUrl" placeholder="rtsp://user:password@192.168.1.10:554/stream1" spellcheck="false" />
+        <input
+          formControlName="hqUrl"
+          placeholder="rtsp://user:password@192.168.1.10:554/stream1"
+          spellcheck="false"
+        />
         @if (form.controls.hqUrl.invalid) {
           <small class="field-error">Enter a URL starting with rtsp:// or rtsps://</small>
         }
@@ -65,7 +97,11 @@
 
       <label>
         <span>LQ stream URL <span class="hint">· used in grid view</span></span>
-        <input formControlName="lqUrl" placeholder="rtsp://user:password@192.168.1.10:554/stream2" spellcheck="false" />
+        <input
+          formControlName="lqUrl"
+          placeholder="rtsp://user:password@192.168.1.10:554/stream2"
+          spellcheck="false"
+        />
         @if (form.controls.lqUrl.invalid) {
           <small class="field-error">Enter a URL starting with rtsp:// or rtsps://</small>
         }
@@ -103,7 +139,9 @@
         </button>
         <span class="spacer"></span>
         <button type="button" class="btn" (click)="closeForm()">Cancel</button>
-        <button type="submit" class="btn primary" [disabled]="form.invalid || saving()">Save</button>
+        <button type="submit" class="btn primary" [disabled]="form.invalid || saving()">
+          Save
+        </button>
       </div>
     </form>
   }
@@ -128,16 +166,40 @@
           <tr>
             <td>{{ cam.name }}</td>
             <td class="url">
-              @if (cam.hqUrl) { {{ mask(cam.hqUrl) }} } @else { <span class="fallback">uses LQ stream</span> }
+              @if (cam.hqUrl) {
+                {{ mask(cam.hqUrl) }}
+              } @else {
+                <span class="fallback">uses LQ stream</span>
+              }
             </td>
             <td class="url">
-              @if (cam.lqUrl) { {{ mask(cam.lqUrl) }} } @else { <span class="fallback">uses HQ stream</span> }
+              @if (cam.lqUrl) {
+                {{ mask(cam.lqUrl) }}
+              } @else {
+                <span class="fallback">uses HQ stream</span>
+              }
             </td>
             <td>{{ cam.transport.toUpperCase() }}</td>
             <td class="actions">
               <a class="btn small" [routerLink]="['/camera', cam.id]">Watch</a>
-              <button type="button" class="btn small icon" (click)="store.move(cam.id, -1)" [disabled]="first" aria-label="Move up">↑</button>
-              <button type="button" class="btn small icon" (click)="store.move(cam.id, 1)" [disabled]="last" aria-label="Move down">↓</button>
+              <button
+                type="button"
+                class="btn small icon"
+                (click)="store.move(cam.id, -1)"
+                [disabled]="first"
+                aria-label="Move up"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                class="btn small icon"
+                (click)="store.move(cam.id, 1)"
+                [disabled]="last"
+                aria-label="Move down"
+              >
+                ↓
+              </button>
               <button type="button" class="btn small" (click)="startEdit(cam)">Edit</button>
               <button type="button" class="btn small danger" (click)="remove(cam)">Delete</button>
             </td>

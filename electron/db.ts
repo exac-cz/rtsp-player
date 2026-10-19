@@ -46,7 +46,9 @@ export class CameraRepository {
   }
 
   private migrate(): void {
-    const { user_version } = this.db.prepare('PRAGMA user_version').get() as { user_version: number };
+    const { user_version } = this.db.prepare('PRAGMA user_version').get() as {
+      user_version: number;
+    };
     if (user_version < 1) {
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS cameras (
@@ -75,21 +77,28 @@ export class CameraRepository {
   }
 
   list(): Camera[] {
-    const rows = this.db.prepare('SELECT * FROM cameras ORDER BY sort_order, id').all() as unknown as CameraRow[];
+    const rows = this.db
+      .prepare('SELECT * FROM cameras ORDER BY sort_order, id')
+      .all() as unknown as CameraRow[];
     return rows.map(toCamera);
   }
 
   get(id: number): Camera | undefined {
-    const row = this.db.prepare('SELECT * FROM cameras WHERE id = ?').get(id) as unknown as CameraRow | undefined;
+    const row = this.db.prepare('SELECT * FROM cameras WHERE id = ?').get(id) as unknown as
+      CameraRow | undefined;
     return row ? toCamera(row) : undefined;
   }
 
   create(input: CameraInput): Camera {
-    const { next } = this.db.prepare('SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM cameras').get() as {
+    const { next } = this.db
+      .prepare('SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM cameras')
+      .get() as {
       next: number;
     };
     const result = this.db
-      .prepare('INSERT INTO cameras (name, hq_url, lq_url, transport, sort_order) VALUES (?, ?, ?, ?, ?)')
+      .prepare(
+        'INSERT INTO cameras (name, hq_url, lq_url, transport, sort_order) VALUES (?, ?, ?, ?, ?)',
+      )
       .run(input.name, encryptUrl(input.hqUrl), encryptUrl(input.lqUrl), input.transport, next);
     return this.get(Number(result.lastInsertRowid))!;
   }
@@ -114,7 +123,9 @@ export class CameraRepository {
     this.db.exec('BEGIN');
     try {
       if (replace) this.db.exec('DELETE FROM cameras');
-      const { next } = this.db.prepare('SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM cameras').get() as {
+      const { next } = this.db
+        .prepare('SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM cameras')
+        .get() as {
         next: number;
       };
       const insert = this.db.prepare(
@@ -122,8 +133,13 @@ export class CameraRepository {
       );
       const ids = inputs.map((input, i) =>
         Number(
-          insert.run(input.name, encryptUrl(input.hqUrl), encryptUrl(input.lqUrl), input.transport, next + i)
-            .lastInsertRowid,
+          insert.run(
+            input.name,
+            encryptUrl(input.hqUrl),
+            encryptUrl(input.lqUrl),
+            input.transport,
+            next + i,
+          ).lastInsertRowid,
         ),
       );
       this.db.exec('COMMIT');
@@ -148,13 +164,16 @@ export class CameraRepository {
   }
 
   getSetting(key: string): string | null {
-    const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined;
+    const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as
+      { value: string } | undefined;
     return row?.value ?? null;
   }
 
   setSetting(key: string, value: string): void {
     this.db
-      .prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+      .prepare(
+        'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+      )
       .run(key, value);
   }
 

@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
 import {
   AbstractControl,
   FormControl,
@@ -42,6 +51,8 @@ interface StreamTest {
 })
 export class CameraManager {
   protected readonly store = inject(CameraStore);
+  private readonly injector = inject(Injector);
+  private readonly nameInput = viewChild<ElementRef<HTMLInputElement>>('nameInput');
 
   protected readonly form = new FormGroup(
     {
@@ -82,7 +93,12 @@ export class CameraManager {
 
   protected startEdit(camera: Camera): void {
     this.editingId.set(camera.id);
-    this.form.reset({ name: camera.name, hqUrl: camera.hqUrl, lqUrl: camera.lqUrl, transport: camera.transport });
+    this.form.reset({
+      name: camera.name,
+      hqUrl: camera.hqUrl,
+      lqUrl: camera.lqUrl,
+      transport: camera.transport,
+    });
     this.openForm();
   }
 
@@ -165,7 +181,12 @@ export class CameraManager {
   protected async applyImport(mode: ImportMode): Promise<void> {
     const api = this.store.api;
     if (!api) return;
-    if (mode === 'replace' && !confirm(`Delete your ${this.store.cameras().length} cameras and replace them with the imported ones?`)) {
+    if (
+      mode === 'replace' &&
+      !confirm(
+        `Delete your ${this.store.cameras().length} cameras and replace them with the imported ones?`,
+      )
+    ) {
       return;
     }
     await this.runTransfer(async () => {
@@ -173,7 +194,10 @@ export class CameraManager {
       this.importPreview.set(null);
       await this.store.load();
       const skippedText = skipped ? `, skipped ${skipped} already in the list` : '';
-      this.notice.set({ ok: true, text: `Imported ${added} ${added === 1 ? 'camera' : 'cameras'}${skippedText}.` });
+      this.notice.set({
+        ok: true,
+        text: `Imported ${added} ${added === 1 ? 'camera' : 'cameras'}${skippedText}.`,
+      });
     });
   }
 
@@ -194,6 +218,8 @@ export class CameraManager {
     this.testResults.set([]);
     this.formError.set(null);
     this.formOpen.set(true);
+    // Move focus into the form the user just asked for (instead of the `autofocus` attribute).
+    afterNextRender(() => this.nameInput()?.nativeElement.focus(), { injector: this.injector });
   }
 
   private input(): CameraInput {

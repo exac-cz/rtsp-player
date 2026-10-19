@@ -20,7 +20,9 @@ export class CameraStore {
 
   async load(): Promise<void> {
     if (!this.api) {
-      this.error.set('The camera database is only available inside the Electron app. Start it with "npm start".');
+      this.error.set(
+        'The camera database is only available inside the Electron app. Start it with "npm start".',
+      );
       this.loaded.set(true);
       return;
     }

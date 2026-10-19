@@ -10,6 +10,8 @@ npm install
 npm start        # dev: ng serve + Electron with live reload of the UI
 npm run electron # production build, run in Electron
 npm run dist     # build a Windows installer into ./release
+npm run lint     # ESLint for src/ and electron/ (npm run lint:fix to auto-fix)
+npm run format   # Prettier (npm run format:check to verify only)
 ```
 
 - **Cameras** tab: add/edit/delete/reorder cameras, with a *Test connection* button that grabs a snapshot.

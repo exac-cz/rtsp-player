@@ -9,9 +9,32 @@
     <div class="editor-row">
       <span class="pos">{{ i + 1 }}</span>
       <span class="name">{{ cam.name }}</span>
-      <button type="button" class="btn small icon" (click)="move(i, -1)" [disabled]="first" aria-label="Move up">↑</button>
-      <button type="button" class="btn small icon" (click)="move(i, 1)" [disabled]="last" aria-label="Move down">↓</button>
-      <button type="button" class="btn small icon danger" (click)="remove(cam.id)" aria-label="Remove from grid">✕</button>
+      <button
+        type="button"
+        class="btn small icon"
+        (click)="move(i, -1)"
+        [disabled]="first"
+        aria-label="Move up"
+      >
+        ↑
+      </button>
+      <button
+        type="button"
+        class="btn small icon"
+        (click)="move(i, 1)"
+        [disabled]="last"
+        aria-label="Move down"
+      >
+        ↓
+      </button>
+      <button
+        type="button"
+        class="btn small icon danger"
+        (click)="remove(cam.id)"
+        aria-label="Remove from grid"
+      >
+        ✕
+      </button>
     </div>
   } @empty {
     <p class="muted">No cameras selected yet. Add some from the list below.</p>
@@ -35,6 +58,6 @@
 
 <div class="form-actions">
   <span class="spacer"></span>
-  <button type="button" class="btn" (click)="cancel.emit()">Cancel</button>
-  <button type="button" class="btn primary" (click)="save.emit(draft())">Save</button>
+  <button type="button" class="btn" (click)="cancelled.emit()">Cancel</button>
+  <button type="button" class="btn primary" (click)="saved.emit(draft())">Save</button>
 </div>

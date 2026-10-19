@@ -1,12 +1,32 @@
 <div class="toolbar">
   <a class="btn" routerLink="/grid">‹ Grid</a>
-  <button type="button" class="btn icon" (click)="step(-1)" [disabled]="cameras().length < 2" aria-label="Previous camera">◀</button>
-  <button type="button" class="btn icon" (click)="step(1)" [disabled]="cameras().length < 2" aria-label="Next camera">▶</button>
+  <button
+    type="button"
+    class="btn icon"
+    (click)="step(-1)"
+    [disabled]="cameras().length < 2"
+    aria-label="Previous camera"
+  >
+    ◀
+  </button>
+  <button
+    type="button"
+    class="btn icon"
+    (click)="step(1)"
+    [disabled]="cameras().length < 2"
+    aria-label="Next camera"
+  >
+    ▶
+  </button>
   <h2 class="toolbar-title">{{ camera()?.name }}</h2>
   <span class="spacer"></span>
   <span class="muted">← → switch · F fullscreen</span>
-  <button type="button" class="btn" (click)="saveSnapshot()" [disabled]="!camera()">📷 Snapshot</button>
-  <button type="button" class="btn" (click)="fullscreen()" [disabled]="!camera()">⛶ Fullscreen</button>
+  <button type="button" class="btn" (click)="saveSnapshot()" [disabled]="!camera()">
+    📷 Snapshot
+  </button>
+  <button type="button" class="btn" (click)="fullscreen()" [disabled]="!camera()">
+    ⛶ Fullscreen
+  </button>
 </div>
 
 <div class="single-layout">
@@ -23,7 +43,9 @@
 
   <nav class="camera-list" aria-label="Cameras">
     @for (cam of cameras(); track cam.id) {
-      <a [routerLink]="['/camera', cam.id]" [class.active]="cam.id === camera()?.id">{{ cam.name }}</a>
+      <a [routerLink]="['/camera', cam.id]" [class.active]="cam.id === camera()?.id">{{
+        cam.name
+      }}</a>
     }
   </nav>
 </div>

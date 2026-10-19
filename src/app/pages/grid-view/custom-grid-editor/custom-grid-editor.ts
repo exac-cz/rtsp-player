@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  linkedSignal,
+  output,
+} from '@angular/core';
 import type { Camera } from '@shared/api-types';
 
 /** Side panel for choosing which cameras appear in the custom grid, and in what order. */
@@ -12,8 +19,8 @@ export class CustomGridEditor {
   readonly cameras = input.required<Camera[]>();
   /** Camera ids currently in the custom grid, in display order. */
   readonly selectedIds = input.required<number[]>();
-  readonly save = output<number[]>();
-  readonly cancel = output<void>();
+  readonly saved = output<number[]>();
+  readonly cancelled = output<void>();
 
   /** Working copy; reset whenever the saved selection changes. */
   protected readonly draft = linkedSignal(() => [...this.selectedIds()]);

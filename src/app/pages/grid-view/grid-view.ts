@@ -67,11 +67,17 @@ export class GridView {
   });
 
   /** Custom and Auto pick the column count from the number of cameras; the others are fixed. */
-  private readonly isFlexible = computed(() => this.layout() === 'custom' || this.layout() === 'auto');
+  private readonly isFlexible = computed(
+    () => this.layout() === 'custom' || this.layout() === 'auto',
+  );
 
-  private readonly pageSize = computed(() => (this.isFlexible() ? AUTO_MAX_TILES : Number(this.layout()) ** 2));
+  private readonly pageSize = computed(() =>
+    this.isFlexible() ? AUTO_MAX_TILES : Number(this.layout()) ** 2,
+  );
 
-  protected readonly pageCount = computed(() => Math.max(1, Math.ceil(this.gridCameras().length / this.pageSize())));
+  protected readonly pageCount = computed(() =>
+    Math.max(1, Math.ceil(this.gridCameras().length / this.pageSize())),
+  );
   protected readonly currentPage = computed(() => Math.min(this.page(), this.pageCount() - 1));
 
   protected readonly visibleCameras = computed(() => {
@@ -102,7 +108,8 @@ export class GridView {
       if (!saved) return;
       try {
         const ids = JSON.parse(saved) as unknown;
-        if (Array.isArray(ids)) this.savedCustomIds.set(ids.filter((id): id is number => Number.isInteger(id)));
+        if (Array.isArray(ids))
+          this.savedCustomIds.set(ids.filter((id): id is number => Number.isInteger(id)));
       } catch {
         // Ignore a corrupt setting; the custom grid falls back to all cameras.
       }

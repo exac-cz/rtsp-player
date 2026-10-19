@@ -25,6 +25,8 @@ export function maskCredentials(text: string): string {
 }
 
 function inputArgs(source: StreamSource): string[] {
+  // Keep each ffmpeg option next to its value.
+  // prettier-ignore
   return [
     '-hide_banner',
     '-loglevel', 'error',
@@ -102,9 +104,12 @@ export class StreamManager {
     const send = (channel: string, ...args: unknown[]) => {
       if (!owner.isDestroyed()) owner.send(channel, streamId, ...args);
     };
-    const sendStatus = (status: StreamStatus, message?: string) => send('stream:status', status, message);
+    const sendStatus = (status: StreamStatus, message?: string) =>
+      send('stream:status', status, message);
 
     const fps = options.fps ?? 15;
+    // Keep each ffmpeg option next to its value.
+    // prettier-ignore
     const args = [
       ...inputArgs(source),
       '-vf', scaleFilter(options.maxWidth),
@@ -198,7 +203,18 @@ export function captureSnapshot(source: StreamSource): Promise<TestResult> {
     try {
       proc = spawn(
         ffmpegPath(),
-        [...inputArgs(source), '-vf', scaleFilter(640), '-frames:v', '1', '-c:v', 'mjpeg', '-f', 'image2', '-'],
+        [
+          ...inputArgs(source),
+          '-vf',
+          scaleFilter(640),
+          '-frames:v',
+          '1',
+          '-c:v',
+          'mjpeg',
+          '-f',
+          'image2',
+          '-',
+        ],
         { windowsHide: true },
       );
     } catch (err) {
@@ -228,7 +244,10 @@ export function captureSnapshot(source: StreamSource): Promise<TestResult> {
       if (code === 0 && image.length > 0) {
         done({ ok: true, snapshot: `data:image/jpeg;base64,${image.toString('base64')}` });
       } else {
-        done({ ok: false, error: maskCredentials(firstError(stderr)) || `ffmpeg exited with code ${code}` });
+        done({
+          ok: false,
+          error: maskCredentials(firstError(stderr)) || `ffmpeg exited with code ${code}`,
+        });
       }
     });
   });

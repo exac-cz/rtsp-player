@@ -10,7 +10,8 @@ export function toId(value: unknown): number {
 
 export function toUrl(value: unknown, label: string): string {
   const url = typeof value === 'string' ? value.trim() : '';
-  if (url && !/^rtsps?:\/\/\S+$/i.test(url)) throw new Error(`${label} must start with rtsp:// or rtsps://`);
+  if (url && !/^rtsps?:\/\/\S+$/i.test(url))
+    throw new Error(`${label} must start with rtsp:// or rtsps://`);
   return url;
 }
 
