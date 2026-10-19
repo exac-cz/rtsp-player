@@ -1,6 +1,6 @@
 # RTSP Player
 
-Desktop app (Angular 21 + Electron 44 + SQLite) for watching home CCTV cameras over RTSP,
+Desktop app (Angular 22 + Electron 44 + SQLite) for watching home CCTV cameras over RTSP,
 either one camera at a time or several in a grid.
 
 ## Usage
