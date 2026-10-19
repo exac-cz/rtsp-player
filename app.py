@@ -78,7 +78,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         ]
         try:
             process = subprocess.Popen(
-                command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+                command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=False
             )
         except OSError:
             self.send_error(503, "FFmpeg is not installed or could not be started")

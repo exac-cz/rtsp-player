@@ -66,6 +66,7 @@ class HttpTests(unittest.TestCase):
 
         command = popen.call_args.args[0]
         self.assertEqual(command[command.index("-i") + 1], camera_url)
+        self.assertFalse(popen.call_args.kwargs["shell"])
         process.terminate.assert_called_once()
 
 
