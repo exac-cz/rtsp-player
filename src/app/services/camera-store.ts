@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
-import type { Camera, CameraInput, RtspApi } from '../../../electron/api-types';
+import type { Camera, CameraInput, RtspApi } from '@shared/api-types';
+import { errorMessage } from '../utils/error-message';
 
 declare global {
   interface Window {
@@ -75,15 +76,4 @@ export class CameraStore {
     if (!this.api) throw new Error('Not running inside Electron');
     return this.api;
   }
-}
-
-/** Strip Electron's "Error invoking remote method ..." prefix from IPC errors. */
-export function errorMessage(err: unknown): string {
-  const message = err instanceof Error ? err.message : String(err);
-  return message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
-}
-
-/** Hide the password part of an RTSP URL for display. */
-export function maskUrl(url: string): string {
-  return url.replace(/(rtsps?:\/\/[^:/@\s]+):[^@/\s]+@/i, '$1:••••@');
 }

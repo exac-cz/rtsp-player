@@ -15,8 +15,10 @@ import type {
   ImportPreview,
   TestResult,
   Transport,
-} from '../../../electron/api-types';
-import { CameraStore, errorMessage, maskUrl } from '../core/camera-store';
+} from '@shared/api-types';
+import { CameraStore } from '../../services/camera-store';
+import { errorMessage } from '../../utils/error-message';
+import { maskUrl } from '../../utils/mask-url';
 
 /** Empty, or an rtsp:// / rtsps:// URL. */
 const RTSP_URL = /^\s*(rtsps?:\/\/\S+)?\s*$/i;

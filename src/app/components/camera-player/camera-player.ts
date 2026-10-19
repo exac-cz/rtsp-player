@@ -9,8 +9,8 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { Camera, StreamQuality, StreamStatus } from '../../../electron/api-types';
-import { CameraStore } from '../core/camera-store';
+import type { Camera, StreamQuality, StreamStatus } from '@shared/api-types';
+import { CameraStore } from '../../services/camera-store';
 
 const RETRY_DELAY_MS = 5000;
 

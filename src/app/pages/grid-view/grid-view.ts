@@ -9,11 +9,11 @@ import {
   viewChildren,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import type { Camera, StreamQuality } from '../../../electron/api-types';
-import { CUSTOM_GRID_SETTING } from '../../../electron/settings-keys';
-import { CameraStore } from '../core/camera-store';
-import { CameraPlayer } from '../player/camera-player';
-import { CustomGridEditor } from './custom-grid-editor';
+import type { Camera, StreamQuality } from '@shared/api-types';
+import { CUSTOM_GRID_SETTING } from '@shared/settings-keys';
+import { CameraStore } from '../../services/camera-store';
+import { CameraPlayer } from '../../components/camera-player/camera-player';
+import { CustomGridEditor } from './custom-grid-editor/custom-grid-editor';
 
 type Layout = 'custom' | 'auto' | '1' | '2' | '3' | '4';
 

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { CameraStore } from '../core/camera-store';
-import { CameraPlayer } from '../player/camera-player';
+import { CameraStore } from '../../services/camera-store';
+import { CameraPlayer } from '../../components/camera-player/camera-player';
 
 @Component({
   selector: 'app-single-view',

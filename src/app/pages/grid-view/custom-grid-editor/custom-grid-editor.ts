@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output } from '@angular/core';
-import type { Camera } from '../../../electron/api-types';
+import type { Camera } from '@shared/api-types';
 
 /** Side panel for choosing which cameras appear in the custom grid, and in what order. */
 @Component({

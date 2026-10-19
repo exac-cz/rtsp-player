@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import type { AppInfo } from '../../electron/api-types';
-import { CameraStore } from './core/camera-store';
+import type { AppInfo } from '@shared/api-types';
+import { CameraStore } from './services/camera-store';
 
 @Component({
   selector: 'app-root',

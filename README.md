@@ -35,10 +35,20 @@ electron/
   streams.ts    ffmpeg process management, MJPEG frame parsing, snapshots
   api-types.ts  types shared with the Angular app
 src/app/
-  core/camera-store.ts      signal-based store over window.rtspApi
-  player/camera-player.ts   canvas player with status overlay + auto-reconnect
-  grid/  single/  cameras/  the three screens
+  app.*                     shell: title bar with window buttons, navigation, router outlet
+  pages/                    routed screens
+    grid-view/              grid layouts, LQ/HQ toggle (+ custom-grid-editor/ side panel)
+    single-view/            one camera at full resolution
+    camera-manager/         camera list, add/edit form, import/export
+  components/
+    camera-player/          canvas player with status overlay + auto-reconnect
+  services/
+    camera-store.ts         signal-based store over window.rtspApi (database via IPC)
+  utils/                    small helpers (IPC error messages, password masking)
 ```
+
+The renderer imports the shared types as `@shared/api-types` and `@shared/settings-keys` (tsconfig path
+aliases for the two files in `electron/` that both sides use).
 
 ## Notes
 
