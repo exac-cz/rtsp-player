@@ -1,6 +1,6 @@
 # RTSP Player
 
-Angular 21 + Electron 44 desktop app for watching RTSP CCTV cameras. See README.md for features,
+Angular 22 + Electron 44 desktop app for watching RTSP CCTV cameras. See README.md for features,
 architecture and commands.
 
 ## Project structure (`src/app/`)
