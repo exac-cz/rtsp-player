@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RTSP Player</title>
+    <style>
+      :root { color-scheme: dark; font: 16px system-ui, sans-serif; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #111827; color: #f3f4f6; }
+      main { width: min(900px, calc(100% - 32px)); }
+      h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+      form { display: flex; gap: 8px; }
+      input { flex: 1; min-width: 0; padding: 12px; border: 1px solid #4b5563; border-radius: 6px; background: #1f2937; color: inherit; }
+      button { padding: 0 18px; border: 0; border-radius: 6px; background: #2563eb; color: white; font: inherit; cursor: pointer; }
+      button[type="button"] { background: #4b5563; }
+      #status { min-height: 1.5em; color: #9ca3af; }
+      #screen { display: block; max-width: 100%; max-height: 70vh; margin: 0 auto; }
+      #screen[hidden] { display: none; }
+      @media (max-width: 520px) { form { flex-direction: column; } button { min-height: 44px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>RTSP Player</h1>
+      <form id="player">
+        <input id="url" type="url" placeholder="rtsp://camera-address/stream" aria-label="Camera RTSP URL" required>
+        <button type="submit">Play</button>
+        <button id="stop" type="button">Stop</button>
+      </form>
+      <p id="status" role="status">Enter your camera's RTSP URL to start playback.</p>
+      <img id="screen" alt="Live camera stream" hidden>
+    </main>
+    <script>
+      const form = document.querySelector("#player");
+      const url = document.querySelector("#url");
+      const screen = document.querySelector("#screen");
+      const status = document.querySelector("#status");
+      const streamToken = "__STREAM_TOKEN__";
+
+      function stop() {
+        screen.removeAttribute("src");
+        screen.hidden = true;
+      }
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!/^rtsps?:\/\//i.test(url.value)) {
+          status.textContent = "Please enter an rtsp:// or rtsps:// camera URL.";
+          return;
+        }
+        stop();
+        screen.src = `/stream?url=${encodeURIComponent(url.value)}&token=${encodeURIComponent(streamToken)}`;
+        screen.hidden = false;
+        status.textContent = "Connecting to camera…";
+      });
+
+      document.querySelector("#stop").addEventListener("click", () => {
+        stop();
+        status.textContent = "Playback stopped.";
+      });
+      screen.addEventListener("load", () => {
+        status.textContent = "Live";
+      });
+      screen.addEventListener("error", () => {
+        status.textContent = "Stream unavailable. Check the camera URL and connection.";
+      });
+    </script>
+  </body>
+</html>
