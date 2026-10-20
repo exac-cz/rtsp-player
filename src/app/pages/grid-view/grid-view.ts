@@ -2,8 +2,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   ElementRef,
   inject,
+  input,
+  linkedSignal,
   signal,
   viewChild,
   viewChildren,
@@ -12,6 +15,7 @@ import { Router, RouterLink } from '@angular/router';
 import type { Camera, StreamQuality } from '@shared/api-types';
 import { CUSTOM_GRID_SETTING } from '@shared/settings-keys';
 import { CameraStore } from '../../services/camera-store';
+import { LastGridPage, type GridPage } from '../../services/last-grid-page';
 import { CameraPlayer } from '../../components/camera-player/camera-player';
 import { CustomGridEditor } from './custom-grid-editor/custom-grid-editor';
 
@@ -32,8 +36,14 @@ export class GridView {
   private readonly gridEl = viewChild<ElementRef<HTMLElement>>('grid');
   private readonly players = viewChildren(CameraPlayer);
 
+  /**
+   * Which grid page this is, from the route data: 'custom' is the user's own camera selection
+   * (its own title-bar entry), 'grid' offers the Auto and fixed layouts.
+   */
+  readonly mode = input<GridPage>('grid');
+
+  /** Layouts offered on the Grid view page (the Custom grid has its own page). */
   protected readonly layouts: { value: Layout; label: string }[] = [
-    { value: 'custom', label: 'Custom' },
     { value: 'auto', label: 'Auto' },
     { value: '1', label: '1×1' },
     { value: '2', label: '2×2' },
@@ -41,8 +51,9 @@ export class GridView {
     { value: '4', label: '4×4' },
   ];
 
-  /** The custom grid is the default view every time the app starts. */
-  protected readonly layout = signal<Layout>('custom');
+  protected readonly layout = linkedSignal<Layout>(() =>
+    this.mode() === 'custom' ? 'custom' : 'auto',
+  );
   /** Grid starts on the light sub-streams; HQ is opt-in because it costs much more CPU. */
   protected readonly quality = signal<StreamQuality>('lq');
   protected readonly editing = signal(false);
@@ -104,6 +115,9 @@ export class GridView {
   });
 
   constructor() {
+    const lastGridPage = inject(LastGridPage);
+    effect(() => lastGridPage.page.set(this.mode()));
+
     void this.store.getSetting(CUSTOM_GRID_SETTING).then((saved) => {
       if (!saved) return;
       try {
@@ -119,7 +133,6 @@ export class GridView {
   protected setLayout(layout: Layout): void {
     this.layout.set(layout);
     this.page.set(0);
-    if (layout !== 'custom') this.editing.set(false);
   }
 
   protected async saveCustom(ids: number[]): Promise<void> {

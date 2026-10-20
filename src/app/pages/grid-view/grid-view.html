@@ -1,16 +1,20 @@
 <div class="toolbar grid-toolbar">
   <div class="toolbar-group">
-    <div class="segmented" role="group" aria-label="Grid layout">
-      @for (option of layouts; track option.value) {
-        <button
-          type="button"
-          [class.active]="layout() === option.value"
-          (click)="setLayout(option.value)"
-        >
-          {{ option.label }}
-        </button>
-      }
-    </div>
+    @if (mode() === 'custom') {
+      <h2 class="toolbar-title">Custom grid</h2>
+    } @else {
+      <div class="segmented" role="group" aria-label="Grid layout">
+        @for (option of layouts; track option.value) {
+          <button
+            type="button"
+            [class.active]="layout() === option.value"
+            (click)="setLayout(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        }
+      </div>
+    }
 
     @if (pageCount() > 1) {
       <div class="pager">

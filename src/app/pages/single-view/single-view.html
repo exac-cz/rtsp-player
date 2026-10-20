@@ -1,5 +1,5 @@
 <div class="toolbar">
-  <a class="btn" routerLink="/grid">‹ Grid</a>
+  <a class="btn" [routerLink]="backLink()">‹ {{ backLabel() }}</a>
   <button
     type="button"
     class="btn icon"
@@ -36,7 +36,7 @@
     } @else if (store.loaded()) {
       <div class="empty-state">
         <h2>Camera not found</h2>
-        <a class="btn primary" routerLink="/grid">Back to grid</a>
+        <a class="btn primary" [routerLink]="backLink()">Back to {{ backLabel() }}</a>
       </div>
     }
   </div>

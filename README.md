@@ -17,8 +17,10 @@ npm run format   # Prettier (npm run format:check to verify only)
 - **Cameras** tab: add/edit/delete/reorder cameras, with a *Test connection* button that grabs a snapshot.
   Each camera has an **HQ URL** (main stream, used in single view) and an **LQ URL** (sub-stream, used in grid
   view). Only one is required; if just one is set, it is used in both views.
-- **Grid view**: Auto / 1×1 / 2×2 / 3×3 / 4×4 layouts (remembered), paging when there are more cameras than tiles.
-  Click a tile to open it.
+- **Custom grid** (default page): your own choice of cameras in your own order, set with ✎ Edit and saved.
+- **Grid view**: all cameras in Auto / 1×1 / 2×2 / 3×3 / 4×4 layouts, paging when there are more cameras than
+  tiles.
+- Both grids have an LQ/HQ stream toggle (LQ by default), Reload and Fullscreen. Click a tile to open it.
 - **Single view**: full-resolution stream, ← / → to switch cameras, `F` for fullscreen, snapshot to JPEG.
 
 ## How it works
@@ -39,7 +41,8 @@ electron/
 src/app/
   app.*                     shell: title bar with window buttons, navigation, router outlet
   pages/                    routed screens
-    grid-view/              grid layouts, LQ/HQ toggle (+ custom-grid-editor/ side panel)
+    grid-view/              Custom grid and Grid view pages (one component, mode from the route),
+                            LQ/HQ toggle (+ custom-grid-editor/ side panel)
     single-view/            one camera at full resolution
     camera-manager/         camera list, add/edit form, import/export
   components/

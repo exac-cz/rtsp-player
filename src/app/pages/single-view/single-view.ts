@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CameraStore } from '../../services/camera-store';
+import { LastGridPage } from '../../services/last-grid-page';
 import { CameraPlayer } from '../../components/camera-player/camera-player';
 
 @Component({
@@ -30,6 +31,13 @@ export class SingleView {
 
   protected readonly cameras = this.store.cameras;
   protected readonly camera = computed(() => this.store.byId(Number(this.id())));
+
+  /** Return to the grid page the user came from. */
+  private readonly lastGridPage = inject(LastGridPage).page;
+  protected readonly backLink = computed(() => '/' + this.lastGridPage());
+  protected readonly backLabel = computed(() =>
+    this.lastGridPage() === 'custom' ? 'Custom grid' : 'Grid view',
+  );
 
   protected step(delta: number): void {
     const list = this.cameras();
