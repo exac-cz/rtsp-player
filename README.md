@@ -23,6 +23,25 @@ npm run format   # Prettier (npm run format:check to verify only)
 - Both grids have an LQ/HQ stream toggle (LQ by default), Reload and Fullscreen. Click a tile to open it.
 - **Single view**: full-resolution stream, ← / → to switch cameras, `F` for fullscreen, snapshot to JPEG.
 
+## Automatic builds (GitHub Actions)
+
+Every push to `master` runs [`.github/workflows/build.yml`](.github/workflows/build.yml) (it can also be
+started by hand from the Actions tab):
+
+1. **Lint and format check** on Linux; installers are only built when it passes.
+2. **Installers**, built in parallel, each on its own platform:
+   - Windows x64 (`windows-latest`): `RTSP Player Setup <version>.exe`
+   - macOS Apple Silicon (`macos-26`): `RTSP Player-<version>-mac-arm64.dmg`
+   - macOS Intel (`macos-26-intel`): `RTSP Player-<version>-mac-x64.dmg`
+
+Download them from the run's **Artifacts** section (kept for 30 days).
+
+The builds are not code-signed with a paid certificate. Windows SmartScreen asks for confirmation
+(*More info → Run anyway*). On a Mac, the app is ad-hoc signed; because it was downloaded from the internet,
+macOS blocks it the first time — right-click the app and choose **Open**, or run
+`xattr -cr "/Applications/RTSP Player.app"`. On first camera connection macOS asks for permission to access
+devices on the local network; allow it.
+
 ## How it works
 
 Browsers cannot play RTSP, so the Electron main process runs one bundled `ffmpeg`
