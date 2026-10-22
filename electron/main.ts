@@ -147,6 +147,7 @@ function registerIpc(): void {
 
   ipcMain.handle('app:info', (): AppInfo => ({
     isDev: !app.isPackaged,
+    version: app.getVersion(),
     dataPath: app.getPath('userData'),
   }));
 

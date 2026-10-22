@@ -1,0 +1,50 @@
+# Tagged releases: pushing a tag like v1.1.0 builds all installers and publishes a permanent
+# GitHub Release with release notes generated from the merged pull requests.
+# Create the tag with `npm version <patch|minor|major>` on master, then `git push --follow-tags`.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Check tag matches package.json
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: |
+          expected="v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version ($expected). Create release tags with 'npm version'."
+            exit 1
+          fi
+
+  package:
+    needs: verify
+    uses: ./.github/workflows/package.yml
+
+  publish:
+    name: Publish GitHub Release
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+      - run: ls -l artifacts
+      - name: Create release
+        run: |
+          gh release create "$GITHUB_REF_NAME" artifacts/* \
+            --verify-tag \
+            --title "RTSP Player ${GITHUB_REF_NAME#v}" \
+            --generate-notes

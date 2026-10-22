@@ -58,6 +58,8 @@ export type ExportResult = { saved: false } | { saved: true; path: string; count
 export interface AppInfo {
   /** True when running from source (npm start / npm run electron), not the installed app. */
   isDev: boolean;
+  /** App version, e.g. 1.1.0 or 1.1.0-nightly.20261022.g18b3086 for nightly builds. */
+  version: string;
   /** Folder holding the database and settings. */
   dataPath: string;
 }

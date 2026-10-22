@@ -23,18 +23,40 @@ npm run format   # Prettier (npm run format:check to verify only)
 - Both grids have an LQ/HQ stream toggle (LQ by default), Reload and Fullscreen. Click a tile to open it.
 - **Single view**: full-resolution stream, ← / → to switch cameras, `F` for fullscreen, snapshot to JPEG.
 
-## Automatic builds (GitHub Actions)
+## Branches, nightly builds and releases
 
-Every push to `master` runs [`.github/workflows/build.yml`](.github/workflows/build.yml) (it can also be
-started by hand from the Actions tab):
+`master` is always releasable and protected: changes arrive only through pull requests from short-lived
+branches (`feature/…`, `fix/…`) that pass the checks below.
 
-1. **Lint and format check** on Linux; installers are only built when it passes.
-2. **Installers**, built in parallel, each on its own platform:
-   - Windows x64 (`windows-latest`): `RTSP Player Setup <version>.exe`
-   - macOS Apple Silicon (`macos-26`): `RTSP Player-<version>-mac-arm64.dmg`
-   - macOS Intel (`macos-26-intel`): `RTSP Player-<version>-mac-x64.dmg`
+| Event | Workflow | Result |
+|---|---|---|
+| Pull request to `master` | [`build.yml`](.github/workflows/build.yml) | Lint/format check + all installers (required checks) |
+| Merge (push) to `master` | [`build.yml`](.github/workflows/build.yml) | Same, then the **Nightly** pre-release is replaced |
+| Tag `vX.Y.Z` | [`release.yml`](.github/workflows/release.yml) | All installers published as GitHub Release `X.Y.Z` |
 
-Download them from the run's **Artifacts** section (kept for 30 days).
+Both use [`package.yml`](.github/workflows/package.yml): lint and format check on Linux, then the installers
+in parallel, each on its own platform — Windows x64 (`windows-latest`), macOS Apple Silicon (`macos-26`) and
+macOS Intel (`macos-26-intel`).
+
+**Nightly builds** get a version like `1.0.0-nightly.20261022.g18b3086` (date and commit; hover over
+"RTSP Player" in the title bar to see it) and always have the same download links on the
+[Nightly release](https://github.com/exac-cz/rtsp-player/releases/tag/nightly):
+`RTSP-Player-nightly-windows-x64.exe`, `RTSP-Player-nightly-macos-arm64.dmg`,
+`RTSP-Player-nightly-macos-x64.dmg`.
+
+**Making a release** (semantic versions: `patch` for fixes, `minor` for features, `major` for breaking
+changes such as an incompatible database):
+
+```bash
+git switch -c release/1.1.0
+npm version minor --no-git-tag-version   # bumps package.json + package-lock.json
+git commit -am "Release 1.1.0"
+git push -u origin release/1.1.0         # open and merge the pull request
+git switch master && git pull
+git tag v1.1.0 && git push origin v1.1.0 # builds and publishes the release
+```
+
+The release workflow refuses a tag that does not match the `package.json` version.
 
 The builds are not code-signed with a paid certificate. Windows SmartScreen asks for confirmation
 (*More info → Run anyway*). On a Mac, the app is ad-hoc signed; because it was downloaded from the internet,

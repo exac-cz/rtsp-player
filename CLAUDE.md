@@ -16,6 +16,15 @@ architecture and commands.
 - Import types/constants shared with Electron via the `@shared/api-types` and `@shared/settings-keys`
   aliases, never with relative `../electron/` paths.
 
+## Git workflow
+
+- `master` is protected by a GitHub ruleset: no direct pushes; work on a short-lived branch
+  (`feature/…`, `fix/…`) and merge through a pull request once the required checks pass.
+- Merges to `master` publish the rolling **Nightly** pre-release; tags `vX.Y.Z` publish releases.
+  The release process (version bump PR, then tag) is described in README.md.
+- CI lives in `.github/workflows/`: `package.yml` (reusable lint + installers), `build.yml` (PRs and
+  nightly), `release.yml` (tags).
+
 ## Code conventions
 
 - **Code must pass `npm run lint`** (ESLint: typescript-eslint recommended + stylistic, angular-eslint
