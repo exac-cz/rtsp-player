@@ -1,6 +1,6 @@
 {
   "name": "rtsp-player",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "scripts": {
     "ng": "ng",
     "start": "concurrently -k -n ng,electron -c blue,magenta \"ng serve --port 4200\" \"wait-on tcp:127.0.0.1:4200 && npm run electron:dev\"",
