@@ -1,6 +1,6 @@
 <!-- The header doubles as the window title bar: drag it to move, double-click to maximize. -->
 <header class="app-header">
-  <span class="brand">
+  <span class="brand" [title]="appInfo() ? 'RTSP Player ' + appInfo()?.version : ''">
     <span class="brand-dot"></span> RTSP Player
     @if (appInfo()?.isDev) {
       <span class="dev-badge" [title]="'Development version — data in ' + appInfo()?.dataPath"

@@ -1,74 +1,73 @@
-# Build installers for Windows and macOS on every push to master (or on demand).
-# The installers are attached to the workflow run as artifacts.
+# Pull requests: lint + build all installers (required checks before merging).
+# Pushes to master (= merged pull requests): the same, then publish the installers as the
+# rolling "Nightly" pre-release, replacing the previous nightly build.
 name: Build
 
 on:
+  pull_request:
+    branches: [master]
   push:
     branches: [master]
   workflow_dispatch:
 
-# A newer push to the same branch cancels a build that is still running.
+# A newer push to the same branch or pull request cancels a build that is still running.
 concurrency:
-  group: build-${{ github.ref }}
+  group: build-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  check:
-    name: Lint and format check
+  version:
+    name: Version
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-        env:
-          # Lint does not need the Electron binary.
-          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
-      - run: npm run lint
-      - run: npm run format:check
+      - id: version
+        # Nightly builds get e.g. 1.0.0-nightly.20261022.g18b3086 (date + commit);
+        # pull request builds keep the package.json version.
+        if: github.event_name != 'pull_request'
+        run: |
+          base=$(node -p "require('./package.json').version")
+          echo "version=${base}-nightly.$(date -u +%Y%m%d).g${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
-  build:
-    name: Build ${{ matrix.name }}
-    needs: check
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: Windows x64
-            os: windows-latest
-            artifact: windows-x64
-            builder-args: --win --x64
-          # Each Mac build runs on its own CPU type: ffmpeg-static downloads ffmpeg for the
-          # machine that runs npm install.
-          - name: macOS Apple Silicon
-            os: macos-26
-            artifact: macos-arm64
-            builder-args: --mac --arm64
-          - name: macOS Intel
-            os: macos-26-intel
-            artifact: macos-x64
-            builder-args: --mac --x64
-    runs-on: ${{ matrix.os }}
+  package:
+    needs: version
+    uses: ./.github/workflows/package.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+
+  publish-nightly:
+    name: Publish nightly pre-release
+    needs: [version, package]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERSION: ${{ needs.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/download-artifact@v8
         with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-      - name: Package installer
-        run: npx electron-builder ${{ matrix.builder-args }} --publish never
-      - uses: actions/upload-artifact@v7
-        with:
-          name: rtsp-player-${{ matrix.artifact }}
-          path: |
-            release/*.exe
-            release/*.dmg
-          if-no-files-found: error
-          retention-days: 30
+          path: artifacts
+      - name: Give the installers fixed names
+        # Fixed names keep the download links stable from one nightly to the next.
+        run: |
+          mkdir upload
+          cp artifacts/rtsp-player-windows-x64/*.exe upload/RTSP-Player-nightly-windows-x64.exe
+          cp artifacts/rtsp-player-macos-arm64/*.dmg upload/RTSP-Player-nightly-macos-arm64.dmg
+          cp artifacts/rtsp-player-macos-x64/*.dmg upload/RTSP-Player-nightly-macos-x64.dmg
+          ls -l upload
+      - name: Replace the Nightly pre-release
+        run: |
+          gh release delete nightly --cleanup-tag --yes || true
+          gh release create nightly upload/* \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "Nightly build ($VERSION)" \
+            --notes "Automatic build of \`master\` at ${GITHUB_SHA::7}, version \`$VERSION\`. Not a release: use for testing. These installers are not code-signed (see README)."

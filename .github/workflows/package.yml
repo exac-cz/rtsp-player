@@ -1,0 +1,82 @@
+# Reusable workflow: lint check, then the installers for Windows and macOS.
+# Called by build.yml (pull requests and nightly builds) and release.yml (tagged releases).
+# The installers are uploaded as artifacts; the callers decide where to publish them.
+name: Package
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version stamped into the app and installer names (empty = package.json version)
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint and format check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+        env:
+          # Lint does not need the Electron binary.
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+      - run: npm run lint
+      - run: npm run format:check
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64
+            os: windows-latest
+            artifact: windows-x64
+            builder-args: --win --x64
+          # Each Mac build runs on its own CPU type: ffmpeg-static downloads ffmpeg for the
+          # machine that runs npm install.
+          - name: macOS Apple Silicon
+            os: macos-26
+            artifact: macos-arm64
+            builder-args: --mac --arm64
+          - name: macOS Intel
+            os: macos-26-intel
+            artifact: macos-x64
+            builder-args: --mac --x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Package installer
+        shell: bash
+        env:
+          APP_VERSION: ${{ inputs.version }}
+        run: |
+          args=()
+          if [ -n "$APP_VERSION" ]; then
+            # Overrides the version in the packaged app (app.getVersion()) and installer names.
+            args+=("--config.extraMetadata.version=$APP_VERSION")
+          fi
+          npx electron-builder ${{ matrix.builder-args }} --publish never "${args[@]}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rtsp-player-${{ matrix.artifact }}
+          path: |
+            release/*.exe
+            release/*.dmg
+          if-no-files-found: error
+          retention-days: 30
